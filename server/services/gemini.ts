@@ -39,18 +39,28 @@ export async function generateVirtualTryOn({
       };
     }
 
-    const prompt = `Create a professional e-commerce fashion photo showing the person from the first image wearing the ${fashionItemName} from the second image. 
+    const prompt = `IMPORTANT: Preserve the person's appearance completely. Only add/change the fashion item.
 
-Instructions:
-- Make the clothing fit naturally with proper shadows and lighting
-- Ensure the original face and body proportions are preserved
-- Remove any original clothing that conflicts with the new item
-- Create realistic fabric draping and movement
-- Maintain professional studio lighting
-- The result should look like a high-quality fashion photograph
+Create a photo showing the EXACT SAME person from the first image wearing the ${fashionItemName} from the second image.
+
+CRITICAL PRESERVATION RULES:
+- Keep the person's face, hair, skin tone, and body EXACTLY the same
+- Preserve all facial features, expressions, and characteristics
+- Keep the same pose, stance, and body position
+- Maintain the same background and lighting
+- Only modify the specific clothing item being added/changed
+- Do not alter makeup, accessories, or other clothing unless they conflict
+
+FASHION ITEM INTEGRATION:
+- Add the ${fashionItemName} naturally to the person
+- Ensure proper fit and realistic fabric behavior
+- Blend the new item seamlessly with existing clothing
+- Remove only conflicting clothing items if absolutely necessary
 
 Category: ${fashionCategory}
-Item: ${fashionItemName}`;
+Item: ${fashionItemName}
+
+Result should look like the exact same person simply wearing the new ${fashionItemName}.`;
 
     // Try with the correct API structure
     const response = await ai.models.generateContent({
