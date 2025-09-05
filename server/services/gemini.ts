@@ -39,28 +39,12 @@ export async function generateVirtualTryOn({
       };
     }
 
-    const prompt = `IMPORTANT: Preserve the person's appearance completely. Only add/change the fashion item.
-
-Create a photo showing the EXACT SAME person from the first image wearing the ${fashionItemName} from the second image.
-
-CRITICAL PRESERVATION RULES:
-- Keep the person's face, hair, skin tone, and body EXACTLY the same
-- Preserve all facial features, expressions, and characteristics
-- Keep the same pose, stance, and body position
-- Maintain the same background and lighting
-- Only modify the specific clothing item being added/changed
-- Do not alter makeup, accessories, or other clothing unless they conflict
-
-FASHION ITEM INTEGRATION:
-- Add the ${fashionItemName} naturally to the person
-- Ensure proper fit and realistic fabric behavior
-- Blend the new item seamlessly with existing clothing
-- Remove only conflicting clothing items if absolutely necessary
-
-Category: ${fashionCategory}
-Item: ${fashionItemName}
-
-Result should look like the exact same person simply wearing the new ${fashionItemName}.`;
+    // Create different prompts for clothing vs accessories
+    const isAccessory = fashionCategory.toLowerCase() === 'accessories';
+    
+    const prompt = isAccessory 
+      ? `Show the exact same person from the first image holding or using the ${fashionItemName} from the second image in a natural way. Keep the person's face, body, pose, and background identical. Only add the accessory item. Preserve all other details.`
+      : `Show the exact same person from the first image wearing the ${fashionItemName} from the second image. Keep the person's face, body, pose, and background identical. Only change the clothing item. Preserve all other details.`;
 
     // Try with the correct API structure
     const response = await ai.models.generateContent({
@@ -82,6 +66,12 @@ Result should look like the exact same person simply wearing the new ${fashionIt
           }
         ]
       }],
+      generationConfig: {
+        temperature: 0.4,
+        topK: 32,
+        topP: 1,
+        maxOutputTokens: 4096,
+      },
     });
 
     const candidates = response.candidates;
