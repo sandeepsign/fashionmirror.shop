@@ -77,59 +77,10 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
   };
 
   const handlePasteButton = async () => {
-    try {
-      const clipboardData = await navigator.clipboard.read();
-      const imageFiles: File[] = [];
-      
-      for (const item of clipboardData) {
-        for (const type of item.types) {
-          if (type.startsWith('image/')) {
-            const blob = await item.getType(type);
-            const timestamp = Date.now();
-            const extension = type.split('/')[1] || 'png';
-            const file = new File([blob], `pasted-fashion-${timestamp}.${extension}`, {
-              type: type
-            });
-            imageFiles.push(file);
-          }
-        }
-      }
-      
-      if (imageFiles.length > 0) {
-        // Add to existing images
-        const existingFiles = selectedImages || [];
-        const allFiles = [...existingFiles, ...imageFiles];
-        
-        onImagesSelect(allFiles);
-        
-        // Update preview URLs
-        const existingUrls = previewUrls || [];
-        const newUrls = imageFiles.map(file => URL.createObjectURL(file));
-        setPreviewUrls([...existingUrls, ...newUrls]);
-        
-        // Update item names
-        const existingNames = itemNames || [];
-        const newNames = imageFiles.map(file => file.name.split('.')[0]);
-        setItemNames([...existingNames, ...newNames]);
-        
-        toast({
-          title: "Fashion item pasted!",
-          description: `Added ${imageFiles.length} fashion item${imageFiles.length > 1 ? 's' : ''} from clipboard`,
-        });
-      } else {
-        toast({
-          title: "No image found",
-          description: "Please copy an image to your clipboard first",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Paste failed",
-        description: "Could not access clipboard. Try using Ctrl+V instead.",
-        variant: "destructive"
-      });
-    }
+    toast({
+      title: "Use Ctrl+V to paste",
+      description: "Copy an image and press Ctrl+V (or Cmd+V on Mac) to paste it here",
+    });
   };
 
   const handlePaste = async (e: ClipboardEvent) => {
