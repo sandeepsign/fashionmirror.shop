@@ -77,10 +77,75 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
   };
 
   const handlePasteButton = async () => {
-    toast({
-      title: "Use Ctrl+V to paste",
-      description: "Copy an image and press Ctrl+V (or Cmd+V on Mac) to paste it here",
-    });
+    try {
+      // First try to request clipboard permissions
+      const permission = await navigator.permissions.query({name: 'clipboard-read' as PermissionName});
+      
+      if (permission.state === 'denied') {
+        toast({
+          title: "Clipboard access denied",
+          description: "Copy an image and use Ctrl+V to paste instead",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Try to read from clipboard
+      if (!navigator.clipboard?.read) {
+        throw new Error('Clipboard API not supported');
+      }
+      
+      const clipboardData = await navigator.clipboard.read();
+      const imageFiles: File[] = [];
+      
+      for (const item of clipboardData) {
+        for (const type of item.types) {
+          if (type.startsWith('image/')) {
+            const blob = await item.getType(type);
+            const timestamp = Date.now();
+            const extension = type.split('/')[1] || 'png';
+            const file = new File([blob], `pasted-fashion-${timestamp}.${extension}`, {
+              type: type
+            });
+            imageFiles.push(file);
+          }
+        }
+      }
+      
+      if (imageFiles.length > 0) {
+        // Add to existing images
+        const existingFiles = selectedImages || [];
+        const allFiles = [...existingFiles, ...imageFiles];
+        
+        onImagesSelect(allFiles);
+        
+        // Update preview URLs
+        const existingUrls = previewUrls || [];
+        const newUrls = imageFiles.map(file => URL.createObjectURL(file));
+        setPreviewUrls([...existingUrls, ...newUrls]);
+        
+        // Update item names
+        const existingNames = itemNames || [];
+        const newNames = imageFiles.map(file => file.name.split('.')[0]);
+        setItemNames([...existingNames, ...newNames]);
+        
+        toast({
+          title: "Fashion item pasted!",
+          description: `Added ${imageFiles.length} fashion item${imageFiles.length > 1 ? 's' : ''} from clipboard`,
+        });
+      } else {
+        toast({
+          title: "No image found",
+          description: "Please copy an image to your clipboard first",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Use Ctrl+V instead",
+        description: "Copy an image and press Ctrl+V (or Cmd+V on Mac) to paste",
+      });
+    }
   };
 
   const handlePaste = async (e: ClipboardEvent) => {
