@@ -50,6 +50,7 @@ Instructions:
 - Create realistic fabric draping and movement
 - Maintain professional studio lighting
 - Use a plain studio background (off-white, light gray, soft blue, or marble texture)
+- Vary the pose naturally - try different angles like slight turns, hand positions, or confident stances
 - The result should look like a high-quality fashion photograph taken in a professional studio`;
 
     // Try with the correct API structure
