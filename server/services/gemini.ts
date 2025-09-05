@@ -39,7 +39,15 @@ export async function generateVirtualTryOn({
       };
     }
 
-    const prompt = `Add the ${fashionItemName} to the person in the first image. Keep everything else the same.`;
+    const prompt = `Show the person from the first image wearing/using the fashion item from the second image.
+
+Instructions:
+- Make the clothing fit naturally with proper shadows and lighting
+- Ensure the original face and body proportions are preserved
+- Remove any original clothing that conflicts with the new item
+- Create realistic fabric draping and movement
+- Maintain professional studio lighting
+- The result should look like a high-quality fashion photograph`;
 
     // Try with the correct API structure
     const response = await ai.models.generateContent({
