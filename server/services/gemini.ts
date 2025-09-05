@@ -43,7 +43,9 @@ export async function generateVirtualTryOn({
 
 Instructions:
 - Make the clothing fit naturally with proper shadows and lighting
-- Ensure the original face and body proportions are preserved
+- PRESERVE the model's face exactly - same person, same facial features, same identity
+- Keep the model's face completely unchanged - only body pose may vary
+- Ensure the original body proportions are preserved
 - COMPLETELY REMOVE and replace any original clothing that conflicts with the new item - do not layer on top
 - If adding a dress, remove the original dress/top completely and show only the new dress
 - If adding a top, remove the original top completely and show only the new top
