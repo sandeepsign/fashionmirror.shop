@@ -47,7 +47,8 @@ Instructions:
 - Remove any original clothing that conflicts with the new item
 - Create realistic fabric draping and movement
 - Maintain professional studio lighting
-- The result should look like a high-quality fashion photograph`;
+- Use a plain studio background (off-white, light gray, soft blue, or marble texture)
+- The result should look like a high-quality fashion photograph taken in a professional studio`;
 
     // Try with the correct API structure
     const response = await ai.models.generateContent({
