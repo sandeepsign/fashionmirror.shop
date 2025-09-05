@@ -44,7 +44,9 @@ export async function generateVirtualTryOn({
 Instructions:
 - Make the clothing fit naturally with proper shadows and lighting
 - Ensure the original face and body proportions are preserved
-- Remove any original clothing that conflicts with the new item
+- COMPLETELY REMOVE and replace any original clothing that conflicts with the new item - do not layer on top
+- If adding a dress, remove the original dress/top completely and show only the new dress
+- If adding a top, remove the original top completely and show only the new top
 - Create realistic fabric draping and movement
 - Maintain professional studio lighting
 - Use a plain studio background (off-white, light gray, soft blue, or marble texture)
