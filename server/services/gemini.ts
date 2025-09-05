@@ -43,8 +43,18 @@ export async function generateVirtualTryOn({
     const isAccessory = fashionCategory.toLowerCase() === 'accessories';
     
     const prompt = isAccessory 
-      ? `Show the exact same person from the first image holding or using the ${fashionItemName} from the second image in a natural way. Keep the person's face, body, pose, and background identical. Only add the accessory item. Preserve all other details.`
-      : `Show the exact same person from the first image wearing the ${fashionItemName} from the second image. Keep the person's face, body, pose, and background identical. Only change the clothing item. Preserve all other details.`;
+      ? `CRITICAL: The person is already wearing a complete outfit. DO NOT change any clothing. Only add the ${fashionItemName} accessory.
+
+Show the exact same person from the first image, wearing their EXISTING OUTFIT, while naturally holding or using the ${fashionItemName} from the second image. 
+
+PRESERVE COMPLETELY:
+- Keep all existing clothing exactly as shown
+- Keep the person's face, hair, body, pose identical  
+- Keep the same background
+- Do not change any part of their current outfit
+
+ONLY ADD: The ${fashionItemName} accessory in a natural way (holding, wearing, carrying).`
+      : `Show the exact same person from the first image wearing the ${fashionItemName} from the second image. Keep the person's face, body, pose, and background identical. Only change the specific clothing item that conflicts with the new ${fashionItemName}. Preserve all other clothing and details.`;
 
     // Try with the correct API structure
     const response = await ai.models.generateContent({
