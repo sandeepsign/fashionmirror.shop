@@ -23,6 +23,22 @@ export async function generateVirtualTryOn({
   fashionCategory
 }: VirtualTryOnRequest): Promise<VirtualTryOnResponse> {
   try {
+    // First test if the API key works with a simple text model
+    try {
+      const testResponse = await ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: ["Hello, are you working?"],
+      });
+      console.log("API key test successful");
+    } catch (testError) {
+      console.error("API key test failed:", testError);
+      return {
+        success: false,
+        error: `API key test failed: ${testError instanceof Error ? testError.message : "Unknown error"}`,
+        resultImageBase64: ""
+      };
+    }
+
     const prompt = `Create a professional e-commerce fashion photo showing the person from the first image wearing the ${fashionItemName} from the second image. 
 
 Instructions:
@@ -36,20 +52,25 @@ Instructions:
 Category: ${fashionCategory}
 Item: ${fashionItemName}`;
 
-    // Content structure is now directly in the API call
-
+    // Try with the correct API structure
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-image-preview",
-      contents: [prompt, {
-        inlineData: {
-          data: modelImageBase64,
-          mimeType: "image/jpeg",
-        },
-      }, {
-        inlineData: {
-          data: fashionImageBase64,
-          mimeType: "image/jpeg",
-        },
+      contents: [{
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              data: modelImageBase64,
+              mimeType: "image/jpeg",
+            },
+          },
+          {
+            inlineData: {
+              data: fashionImageBase64,
+              mimeType: "image/jpeg",
+            },
+          }
+        ]
       }],
     });
 
