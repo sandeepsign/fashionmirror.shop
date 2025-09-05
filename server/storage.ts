@@ -33,22 +33,22 @@ export class MemStorage implements IStorage {
   private initializeFashionItems() {
     const defaultItems: InsertFashionItem[] = [
       {
-        name: "Red Blazer",
-        category: "Professional",
+        name: "Athletic Wear Set",
+        category: "Fitness",
         imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
-        description: "Professional red blazer for business attire"
+        description: "Comfortable athletic wear for fitness activities"
       },
       {
-        name: "Blue Evening Gown",
+        name: "Red Evening Gown",
         category: "Formal",
         imageUrl: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
-        description: "Elegant blue evening gown for special occasions"
+        description: "Elegant red evening gown for special occasions"
       },
       {
-        name: "Summer Top",
+        name: "White Summer Blouse",
         category: "Casual",
         imageUrl: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
-        description: "Light summer top for casual wear"
+        description: "Light white blouse perfect for summer casual wear"
       },
       {
         name: "Leather Handbag",
