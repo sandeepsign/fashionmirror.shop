@@ -101,9 +101,14 @@ Item: ${fashionItemName}`;
       }
     }
 
+    // Log the full response for debugging
+    console.log("Response structure:", JSON.stringify(response, null, 2));
+    console.log("Candidates:", JSON.stringify(candidates, null, 2));
+    console.log("Content parts:", JSON.stringify(content.parts, null, 2));
+
     return {
       success: false,
-      error: "No image data found in response",
+      error: "No image data found in response. This might be due to content moderation or the AI model being unable to process the image combination. Try with a different model photo or fashion item.",
       resultImageBase64: ""
     };
 
