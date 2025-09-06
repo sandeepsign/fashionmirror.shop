@@ -1,9 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTryOnResultSchema } from "@shared/schema";
+import { insertTryOnResultSchema, registerUserSchema, loginUserSchema } from "@shared/schema";
 import { generateVirtualTryOn, imageBufferToBase64 } from "./services/gemini";
 import multer from "multer";
+import bcrypt from "bcrypt";
+import { z } from "zod";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -20,6 +22,111 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Authentication routes
+  
+  // User registration
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const validationResult = registerUserSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Validation failed",
+          details: validationResult.error.errors 
+        });
+      }
+
+      const { username, email, password } = validationResult.data;
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ error: "User with this email already exists" });
+      }
+
+      const existingUsername = await storage.getUserByUsername(username);
+      if (existingUsername) {
+        return res.status(409).json({ error: "Username already taken" });
+      }
+
+      // Hash password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      // Create user
+      const newUser = await storage.createUser({
+        username,
+        email,
+        password: hashedPassword,
+        role: "user"
+      });
+
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = newUser;
+      
+      res.status(201).json({ 
+        message: "User registered successfully", 
+        user: userWithoutPassword 
+      });
+
+    } catch (error) {
+      console.error("Error during registration:", error);
+      res.status(500).json({ error: "Failed to register user" });
+    }
+  });
+
+  // User login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const validationResult = loginUserSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Validation failed",
+          details: validationResult.error.errors 
+        });
+      }
+
+      const { email, password } = validationResult.data;
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+
+      res.json({ 
+        message: "Login successful", 
+        user: userWithoutPassword 
+      });
+
+    } catch (error) {
+      console.error("Error during login:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Get current user (placeholder for session integration)
+  app.get("/api/auth/me", async (req, res) => {
+    // This will be implemented with session management
+    res.status(401).json({ error: "Not authenticated" });
+  });
+
+  // Logout
+  app.post("/api/auth/logout", async (req, res) => {
+    // This will be implemented with session management
+    res.json({ message: "Logout successful" });
+  });
   
   // Get all fashion items
   app.get("/api/fashion-items", async (req, res) => {
