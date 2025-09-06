@@ -1,5 +1,6 @@
 import { type User, type InsertUser, type TryOnResult, type InsertTryOnResult, type FashionItem, type InsertFashionItem } from "@shared/schema";
 import { randomUUID } from "crypto";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -29,6 +30,9 @@ export class MemStorage implements IStorage {
     
     // Initialize with some default fashion items
     this.initializeFashionItems();
+    
+    // Initialize with default admin user
+    this.initializeDefaultAdmin();
   }
 
   private initializeFashionItems() {
@@ -101,6 +105,31 @@ export class MemStorage implements IStorage {
     });
   }
 
+  private async initializeDefaultAdmin() {
+    // Check if admin user already exists
+    const existingAdmin = await this.getUserByEmail("admin");
+    if (existingAdmin) {
+      return; // Admin already exists
+    }
+
+    // Create default admin user with specified credentials
+    const adminId = randomUUID();
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash("W3lcome1!", saltRounds);
+    
+    const adminUser: User = {
+      id: adminId,
+      username: "admin",
+      email: "admin", // Using "admin" as email since it's specified as the login
+      password: hashedPassword,
+      role: "admin",
+      createdAt: new Date()
+    };
+    
+    this.users.set(adminId, adminUser);
+    console.log("Default admin user created: admin / W3lcome1!");
+  }
+
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
@@ -119,7 +148,12 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id, createdAt: new Date() };
+    const user: User = { 
+      ...insertUser, 
+      id, 
+      role: insertUser.role || "user", 
+      createdAt: new Date() 
+    };
     this.users.set(id, user);
     return user;
   }
