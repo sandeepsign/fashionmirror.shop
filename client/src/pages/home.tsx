@@ -127,9 +127,9 @@ export default function Home() {
     return allFashionItems.filter((_, index) => itemSelectionStates[index]);
   };
 
-  const scrollToTryOn = () => {
-    const tryOnElement = document.getElementById('try-on-workspace');
-    tryOnElement?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToUpload = () => {
+    const uploadElement = document.getElementById('upload-section');
+    uploadElement?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -151,7 +151,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 className="bg-primary text-primary-foreground px-8 py-4 text-lg font-medium hover:opacity-90"
-                onClick={scrollToTryOn}
+                onClick={scrollToUpload}
                 data-testid="button-start-try-on"
               >
                 Start Virtual Try-On
@@ -208,7 +208,7 @@ export default function Home() {
         </div>
 
         {/* Upload Section */}
-        <div className="grid lg:grid-cols-2 gap-12 mb-16">
+        <div id="upload-section" className="grid lg:grid-cols-2 gap-12 mb-16">
           <ModelUpload 
             onImageSelect={handleModelImageSelect}
             selectedImage={modelImage}
