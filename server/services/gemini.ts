@@ -50,32 +50,28 @@ export async function generateVirtualTryOn({
       };
     }
 
-    const prompt = `Show the EXACT SAME PERSON from the first image wearing/using the fashion item from the second image.
+    const prompt = `CRITICAL INSTRUCTION: You must preserve the EXACT SAME PERSON'S FACE from the first image. This is the most important requirement.
 
-🚨 CRITICAL FACIAL PRESERVATION REQUIREMENTS - FOLLOW EXACTLY:
-- The model's face must remain 100% IDENTICAL to the original image
-- PRESERVE every facial feature: eyes, nose, mouth, cheekbones, jawline, eyebrows
-- Keep the exact same skin tone, eye color, hair color, and facial structure  
-- The person's identity must be completely unchanged - same individual
-- Only clothing should change - NEVER the person's face or identity
-- Do not alter any facial characteristics whatsoever
-- The result must show the SAME PERSON wearing different clothes
+FACE PRESERVATION (ABSOLUTELY MANDATORY):
+- DO NOT change the person's identity, face, or appearance
+- DO NOT alter hair color, eye color, skin tone, or facial features
+- DO NOT create a different person or model
+- DO NOT change facial structure, nose, mouth, eyes, or jawline
+- The person's head, face, and hair must remain completely identical
+- Only swap the clothing item - NOTHING ELSE
+- This is a clothing swap only - not a person replacement
 
-CLOTHING & STYLING INSTRUCTIONS:
+TASK: Take the clothing item from the second image and place it on the SAME PERSON from the first image.
+
+CLOTHING SWAP INSTRUCTIONS:
 - Make the clothing fit naturally with proper shadows and lighting
-- Ensure the original body proportions are preserved
-- COMPLETELY REMOVE and replace any original clothing that conflicts with the new item - do not layer on top
+- COMPLETELY REMOVE and replace any original clothing that conflicts with the new item
 - If adding a dress, remove the original dress/top completely and show only the new dress
 - If adding a top, remove the original top completely and show only the new top
 - Create realistic fabric draping and movement
-- Maintain professional studio lighting
-- Use a plain studio background (off-white, light gray, soft blue, or marble texture)
+- Professional studio lighting and background
 
-POSE & FINAL VERIFICATION:
-- Keep the model's head position and facial angle similar to the original
-- Minor pose adjustments are acceptable but facial identity must remain unchanged
-- The person in the result must be immediately recognizable as the same individual from the original
-- The result should look like a high-quality fashion photograph of the SAME PERSON taken in a professional studio`;
+VERIFICATION CHECK: If the result shows a different person, hair color, or facial features, the task has failed completely.`;
 
     // Try with the correct API structure
     const response = await ai.models.generateContent({
@@ -168,21 +164,24 @@ export async function generateSimultaneousTryOn({
       };
     }
 
-    const prompt = `Create a professional fashion photograph showing the EXACT SAME PERSON from the first image wearing all the clothing items from the additional images provided. Apply all fashion items simultaneously to create a complete, cohesive outfit.
+    const prompt = `CRITICAL INSTRUCTION: You must preserve the EXACT SAME PERSON'S FACE from the first image. This is the most important requirement.
 
-🚨 CRITICAL FACIAL PRESERVATION REQUIREMENTS - FOLLOW EXACTLY:
-- The model's face must remain 100% IDENTICAL to the original image
-- PRESERVE every facial feature: eyes, nose, mouth, cheekbones, jawline, eyebrows
-- Keep the exact same skin tone, eye color, hair color, and facial structure  
-- The person's identity must be completely unchanged - same individual
-- Only clothing should change - NEVER the person's face or identity
-- Do not alter any facial characteristics whatsoever
-- The result must show the SAME PERSON wearing different clothes
+FACE PRESERVATION (ABSOLUTELY MANDATORY):
+- DO NOT change the person's identity, face, or appearance
+- DO NOT alter hair color, eye color, skin tone, or facial features
+- DO NOT create a different person or model
+- DO NOT change facial structure, nose, mouth, eyes, or jawline
+- The person's head, face, and hair must remain completely identical
+- Only swap the clothing items - NOTHING ELSE
+- This is a clothing swap only - not a person replacement
 
-CLOTHING REQUIREMENTS:
-- COMPLETELY REMOVE and replace any original clothing that conflicts with the new items - do not layer on top
-- Apply all provided fashion items together to create one complete outfit
-- If multiple items conflict (e.g., multiple tops), intelligently choose the most appropriate combination or blend them cohesively
+TASK: Take the clothing items from the additional images and place them on the SAME PERSON from the first image.
+
+CLOTHING SWAP ONLY:
+- COMPLETELY REMOVE and replace any original clothing that conflicts with the new items
+- Apply all provided fashion items together to create one complete outfit  
+- If multiple items conflict, intelligently choose the most appropriate combination
+- Keep the same person's body, just change their clothes
 
 PROFESSIONAL QUALITY STANDARDS:
 - Create realistic fabric draping with proper weight and movement
@@ -206,19 +205,12 @@ BACKGROUND & COMPOSITION:
 - Professional fashion photography composition
 - Maintain focus on the model and clothing
 
-POSE & PRESENTATION:
-- Keep the model's head position and facial angle similar to the original
-- PRESERVE the exact same facial expression or use a neutral expression
-- Ensure the pose showcases the complete outfit effectively
-- The model must be recognizable as the EXACT SAME PERSON from the original image
-- Minor pose adjustments are acceptable but facial identity must remain unchanged
+FINAL REQUIREMENTS:
+- Same face, hair, and person - only different clothes
+- Professional studio lighting and background
+- The result must show the identical person from the first image
 
-FINAL VERIFICATION:
-- The person in the result image must be immediately recognizable as the same individual from the original
-- Anyone looking at both images should clearly see it's the same person wearing different clothes
-- If there's any doubt about facial preservation, prioritize keeping the original face over pose changes
-
-The final result should look like a high-end fashion magazine photograph of the SAME PERSON taken in a professional studio setting.`;
+VERIFICATION CHECK: If the result shows a different person, hair color, or facial features, the task has failed completely.`;
 
     // Build the parts array with model image first, then all fashion images
     const parts = [
