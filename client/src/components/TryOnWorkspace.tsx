@@ -54,7 +54,7 @@ export default function TryOnWorkspace({
     }
   }, [modelImage]);
 
-  const generateBatchTryOnMutation = useMutation({
+  const generateSimultaneousTryOnMutation = useMutation({
     mutationFn: async () => {
       const selectedItems = getSelectedFashionItems();
       
@@ -86,71 +86,43 @@ export default function TryOnWorkspace({
       return { fashionItems: fashionItemsWithImages };
     },
     onSuccess: async ({ fashionItems }) => {
-      const results: TryOnResult[] = [];
-      let currentModelImage = modelImage!; // Start with original model image
-      
       onGenerationStart();
-      onGenerationProgress(0, fashionItems.length);
+      onGenerationProgress(0, 1); // Single step for simultaneous generation
+      setCurrentGeneratingIndex(0); // Show first item as generating
       
-      for (let i = 0; i < fashionItems.length; i++) {
-        const item = fashionItems[i];
-        // Find the original index in allFashionItems for progress display
-        const originalIndex = allFashionItems.findIndex(originalItem => 
-          originalItem.name === item.name && originalItem.category === item.category
-        );
-        setCurrentGeneratingIndex(originalIndex >= 0 ? originalIndex : i);
+      try {
+        // Generate all items simultaneously
+        const response = await apiClient.generateSimultaneousTryOn({
+          modelImage: modelImage!,
+          fashionItems: fashionItems,
+          userId: 'demo-user'
+        });
         
-        try {
-          const response = await apiClient.generateTryOn({
-            modelImage: currentModelImage,
-            fashionImage: item.image,
-            fashionItemName: item.name,
-            fashionCategory: item.category,
-            userId: 'demo-user'
-          });
+        if (response.success && response.result) {
+          // Show the single final result
+          setResultImageUrls([response.result.resultImageUrl]);
+          onResultsGenerated([response.result]);
           
-          if (response.success && response.result) {
-            results.push(response.result);
-            
-            // Convert the result image URL to a File for the next iteration
-            if (i < fashionItems.length - 1) { // Not the last item
-              const resultImageResponse = await fetch(response.result.resultImageUrl);
-              const resultImageBlob = await resultImageResponse.blob();
-              currentModelImage = new File([resultImageBlob], `progressive-result-${i}.jpg`, { type: 'image/jpeg' });
-            }
-            
-            // Only show intermediate results for progress, final result will be the last one
-            setResultImageUrls([response.result.resultImageUrl]);
-          }
+          onGenerationProgress(1, 1);
           
-          onGenerationProgress(i + 1, fashionItems.length);
-        } catch (error) {
-          console.error(`Failed to generate try-on for item ${i}:`, error);
           toast({
-            title: "Generation Failed",
-            description: `Failed to generate try-on for ${item.name}`,
-            variant: "destructive",
+            title: "Try-on complete!",
+            description: `Successfully applied ${fashionItems.length} fashion item${fashionItems.length > 1 ? 's' : ''} simultaneously.`,
           });
-          break; // Stop the progressive chain if one fails
+        } else {
+          throw new Error(response.error || 'Failed to generate simultaneous try-on');
         }
+      } catch (error) {
+        console.error('Failed to generate simultaneous try-on:', error);
+        toast({
+          title: "Generation Failed",
+          description: error instanceof Error ? error.message : "Failed to generate simultaneous try-on",
+          variant: "destructive",
+        });
       }
       
       setCurrentGeneratingIndex(-1);
       onGenerationEnd();
-      onResultsGenerated(results);
-      
-      if (results.length === fashionItems.length) {
-        toast({
-          title: "Progressive Try-On Complete!",
-          description: `Final result shows all ${fashionItems.length} items worn together.`,
-        });
-      } else {
-        toast({
-          title: "Partial Generation",
-          description: `Generated ${results.length} of ${fashionItems.length} items before stopping.`,
-          variant: "destructive",
-        });
-      }
     },
     onError: (error) => {
       console.error("Batch try-on generation failed:", error);
@@ -166,7 +138,7 @@ export default function TryOnWorkspace({
 
   const handleGenerate = () => {
     setResultImageUrls([]);
-    generateBatchTryOnMutation.mutate();
+    generateSimultaneousTryOnMutation.mutate();
   };
 
   const handleDownloadFinal = () => {

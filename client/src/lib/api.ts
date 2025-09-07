@@ -37,6 +37,18 @@ export interface GenerateTryOnResponse {
   error?: string;
 }
 
+export interface GenerateSimultaneousTryOnRequest {
+  modelImage: File;
+  fashionItems: FashionItemInput[];
+  userId?: string;
+}
+
+export interface SimultaneousTryOnResult {
+  success: boolean;
+  result?: TryOnResult;
+  error?: string;
+}
+
 export class APIClient {
   private baseUrl: string;
 
@@ -121,6 +133,40 @@ export class APIClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to generate batch try-on');
+    }
+
+    return response.json();
+  }
+
+  async generateSimultaneousTryOn(request: GenerateSimultaneousTryOnRequest): Promise<SimultaneousTryOnResult> {
+    const formData = new FormData();
+    
+    // Append model image first
+    formData.append('files', request.modelImage);
+    
+    // Append fashion item images
+    request.fashionItems.forEach((item, index) => {
+      formData.append('files', item.image);
+      formData.append(`fashionItems[${index}][name]`, item.name);
+      formData.append(`fashionItems[${index}][category]`, item.category);
+      formData.append(`fashionItems[${index}][source]`, item.source);
+      if (item.collectionId) {
+        formData.append(`fashionItems[${index}][collectionId]`, item.collectionId);
+      }
+    });
+    
+    if (request.userId) {
+      formData.append('userId', request.userId);
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/try-on/generate-simultaneous`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to generate simultaneous try-on');
     }
 
     return response.json();
