@@ -3,6 +3,69 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || "" });
 
+// Function to generate context-aware instructions for fashion items
+async function generateItemInstructions(fashionItemsBase64: string[]): Promise<string> {
+  try {
+    const instructionPrompt = `Analyze the fashion items in the provided images and generate specific, precise instructions for applying them to a model while preserving existing clothing.
+
+For each item, determine its category and provide specific preservation instructions:
+
+ITEM CATEGORIES:
+- Accessories (hats, caps, jewelry, bags, belts, scarves): Should be ADDED without changing any existing clothing
+- Footwear (shoes, boots, sandals, sneakers): Should replace only footwear, keep all clothing intact  
+- Tops (shirts, blouses, jackets, blazers, sweaters): Should replace only tops, keep bottoms and accessories
+- Bottoms (pants, skirts, shorts): Should replace only bottoms, keep tops and accessories
+- Dresses/Jumpsuits: Should replace entire outfit except accessories and footwear
+- Outerwear (coats, jackets): Should be layered over existing clothing
+
+INSTRUCTION FORMAT:
+For each item, write a specific instruction like:
+- "Add this [item type] while keeping the existing [specific clothing items] completely unchanged"
+- "Replace only the [item category] while preserving the existing [other categories]"
+
+Be very specific about what to preserve. For example:
+- If it's a hat: "Add this hat/cap while keeping the existing dress/outfit exactly as it is"
+- If it's a handbag: "Add this handbag while keeping all existing clothing (dress, shoes, jewelry) unchanged"
+- If it's a dress: "Replace the existing outfit with this dress while keeping any accessories and footwear intact"
+
+Generate clear, specific instructions for the items provided:`;
+
+    const parts: any[] = [{ text: instructionPrompt }];
+    
+    // Add all fashion item images for analysis
+    fashionItemsBase64.forEach(fashionImageBase64 => {
+      parts.push({
+        inlineData: {
+          data: fashionImageBase64,
+          mimeType: "image/jpeg",
+        },
+      });
+    });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-image-preview",
+      contents: [{
+        parts
+      }]
+    });
+
+    const candidates = response.candidates;
+    if (!candidates || candidates.length === 0) {
+      return "Apply the fashion items while preserving the model's identity and existing clothing where appropriate.";
+    }
+
+    const result = candidates[0].content?.parts?.[0]?.text;
+    if (!result) {
+      return "Apply the fashion items while preserving the model's identity and existing clothing where appropriate.";
+    }
+
+    return result.trim();
+  } catch (error) {
+    console.error("Error generating item instructions:", error);
+    return "Apply the fashion items while preserving the model's identity and existing clothing where appropriate.";
+  }
+}
+
 export interface VirtualTryOnRequest {
   modelImageBase64: string;
   fashionImageBase64: string;
@@ -50,6 +113,10 @@ export async function generateVirtualTryOn({
       };
     }
 
+    // Generate intelligent instructions for the specific fashion item
+    const itemInstructions = await generateItemInstructions([fashionImageBase64]);
+    console.log("Generated item-specific instructions:", itemInstructions);
+
     const prompt = `CRITICAL INSTRUCTION: You must preserve the EXACT SAME PERSON'S FACE from the first image. This is the most important requirement.
 
 FACE PRESERVATION (ABSOLUTELY MANDATORY):
@@ -58,21 +125,15 @@ FACE PRESERVATION (ABSOLUTELY MANDATORY):
 - DO NOT create a different person or model
 - DO NOT change facial structure, nose, mouth, eyes, or jawline
 - The person's head, face, and hair must remain completely identical
-- Only swap the clothing item - NOTHING ELSE
-- This is a clothing swap only - not a person replacement
+- Only apply fashion item - NOTHING ELSE
+- This is a clothing application only - not a person replacement
 
 TASK: Take the clothing item from the second image and place it on the SAME PERSON from the first image.
 
-CLOTHING APPLICATION RULES:
-- ONLY modify the specific clothing areas that the new item affects
-- PRESERVE all existing clothing that does not conflict with the new item
-- For accessories (hats, jewelry, bags, shoes): ADD them without changing any existing clothing
-- For clothing items: ONLY replace items in the same category
-- If adding a hat: Keep the original dress/outfit completely unchanged
-- If adding shoes: Keep the original outfit completely unchanged  
-- If adding a bag: Keep the original outfit completely unchanged
-- If adding a dress: Only then replace the existing dress/outfit
-- If adding a top: Only replace the existing top, keep bottoms unchanged
+SPECIFIC APPLICATION INSTRUCTIONS:
+${itemInstructions}
+
+PROFESSIONAL REQUIREMENTS:
 - Make the new item fit naturally with proper shadows and lighting
 - Create realistic fabric draping and movement
 - Professional studio lighting and background
@@ -170,6 +231,10 @@ export async function generateSimultaneousTryOn({
       };
     }
 
+    // Generate intelligent instructions for the specific fashion items
+    const itemInstructions = await generateItemInstructions(fashionImagesBase64);
+    console.log("Generated item-specific instructions:", itemInstructions);
+
     const prompt = `CRITICAL INSTRUCTION: You must preserve the EXACT SAME PERSON'S FACE from the first image. This is the most important requirement.
 
 FACE PRESERVATION (ABSOLUTELY MANDATORY):
@@ -178,21 +243,13 @@ FACE PRESERVATION (ABSOLUTELY MANDATORY):
 - DO NOT create a different person or model
 - DO NOT change facial structure, nose, mouth, eyes, or jawline
 - The person's head, face, and hair must remain completely identical
-- Only swap the clothing items - NOTHING ELSE
-- This is a clothing swap only - not a person replacement
+- Only apply fashion items - NOTHING ELSE
+- This is a clothing application only - not a person replacement
 
 TASK: Take the clothing items from the additional images and place them on the SAME PERSON from the first image.
 
-CLOTHING APPLICATION RULES:
-- ONLY modify the specific clothing areas that the new items affect
-- PRESERVE all existing clothing that does not conflict with the new items
-- For accessories (hats, jewelry, bags, shoes): ADD them without changing any existing clothing
-- For clothing items: ONLY replace items in the same category (dress→dress, top→top, etc.)
-- If adding a hat: Keep the original dress/outfit completely unchanged
-- If adding shoes: Keep the original outfit completely unchanged  
-- If adding a bag: Keep the original outfit completely unchanged
-- If adding a top: Only replace the existing top, keep pants/skirt/dress bottom
-- Apply all provided fashion items while preserving maximum original clothing
+SPECIFIC APPLICATION INSTRUCTIONS:
+${itemInstructions}
 
 PROFESSIONAL QUALITY STANDARDS:
 - Create realistic fabric draping with proper weight and movement
