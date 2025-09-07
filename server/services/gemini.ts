@@ -1,9 +1,11 @@
 import * as fs from "fs";
 import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || "" });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "" });
 
-// Function to generate context-aware instructions for fashion items
+// Function to generate context-aware instructions for fashion items using OpenAI
 async function generateItemInstructions(fashionItemsBase64: string[]): Promise<string> {
   try {
     const instructionPrompt = `Analyze the fashion items in the provided images and generate specific, precise instructions for applying them to a model while preserving existing clothing.
@@ -28,40 +30,39 @@ Be very specific about what to preserve. For example:
 - If it's a handbag: "Add this handbag while keeping all existing clothing (dress, shoes, jewelry) unchanged"
 - If it's a dress: "Replace the existing outfit with this dress while keeping any accessories and footwear intact"
 
-Generate clear, specific instructions for the items provided:`;
+Generate clear, specific instructions for the items provided.`;
 
-    const parts: any[] = [{ text: instructionPrompt }];
+    // Prepare images for OpenAI format
+    const imageUrls = fashionItemsBase64.map(base64 => `data:image/jpeg;base64,${base64}`);
     
-    // Add all fashion item images for analysis
-    fashionItemsBase64.forEach(fashionImageBase64 => {
-      parts.push({
-        inlineData: {
-          data: fashionImageBase64,
-          mimeType: "image/jpeg",
-        },
-      });
+    const messages: any[] = [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: instructionPrompt },
+          ...imageUrls.map(url => ({
+            type: "image_url",
+            image_url: { url }
+          }))
+        ]
+      }
+    ];
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages,
+      max_tokens: 500,
+      temperature: 0.3
     });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image-preview",
-      contents: [{
-        parts
-      }]
-    });
-
-    const candidates = response.candidates;
-    if (!candidates || candidates.length === 0) {
-      return "Apply the fashion items while preserving the model's identity and existing clothing where appropriate.";
-    }
-
-    const result = candidates[0].content?.parts?.[0]?.text;
+    const result = response.choices[0]?.message?.content;
     if (!result) {
       return "Apply the fashion items while preserving the model's identity and existing clothing where appropriate.";
     }
 
     return result.trim();
   } catch (error) {
-    console.error("Error generating item instructions:", error);
+    console.error("Error generating item instructions with OpenAI:", error);
     return "Apply the fashion items while preserving the model's identity and existing clothing where appropriate.";
   }
 }
