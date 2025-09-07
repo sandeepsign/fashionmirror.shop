@@ -85,13 +85,7 @@ Instructions:
             },
           }
         ]
-      }],
-      generationConfig: {
-        temperature: 0.4,
-        topK: 32,
-        topP: 1,
-        maxOutputTokens: 4096,
-      },
+      }]
     });
 
     const candidates = response.candidates;
@@ -229,13 +223,7 @@ The final result should look like a high-end fashion magazine photograph taken i
       model: "gemini-2.5-flash-image-preview",
       contents: [{
         parts
-      }],
-      generationConfig: {
-        temperature: 0.3, // Slightly lower for more consistent results
-        topK: 32,
-        topP: 1,
-        maxOutputTokens: 4096,
-      },
+      }]
     });
 
     const candidates = response.candidates;

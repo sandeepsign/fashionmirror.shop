@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertTryOnResultSchema, registerUserSchema, loginUserSchema } from "@shared/schema";
-import { generateVirtualTryOn, imageBufferToBase64 } from "./services/gemini";
+import { generateVirtualTryOn, generateSimultaneousTryOn, imageBufferToBase64 } from "./services/gemini";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import { z } from "zod";
@@ -275,6 +275,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating batch virtual try-on:", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Failed to generate batch try-on results" 
+      });
+    }
+  });
+
+  // Generate simultaneous virtual try-on (all items at once)
+  app.post("/api/try-on/generate-simultaneous", upload.array('files'), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      const { userId } = req.body;
+      
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
+      
+      // First file should be the model image
+      const modelImage = files[0];
+      if (!modelImage.mimetype.startsWith('image/')) {
+        return res.status(400).json({ error: "First file must be a model image" });
+      }
+      
+      // Parse fashion items from form data
+      const fashionItems: Array<{
+        image: Express.Multer.File;
+        name: string;
+        category: string;
+        source: string;
+        collectionId?: string;
+      }> = [];
+      
+      // Extract fashion items from files (skip first model image)
+      const fashionImageFiles = files.slice(1);
+      
+      for (let i = 0; i < fashionImageFiles.length; i++) {
+        const name = req.body[`fashionItems[${i}][name]`] || `Fashion Item ${i + 1}`;
+        const category = req.body[`fashionItems[${i}][category]`] || 'Custom';
+        const source = req.body[`fashionItems[${i}][source]`] || 'upload';
+        const collectionId = req.body[`fashionItems[${i}][collectionId]`];
+        
+        fashionItems.push({
+          image: fashionImageFiles[i],
+          name,
+          category,
+          source,
+          collectionId
+        });
+      }
+      
+      if (fashionItems.length === 0) {
+        return res.status(400).json({ error: "At least one fashion item is required" });
+      }
+
+      const modelImageBase64 = imageBufferToBase64(modelImage.buffer);
+      const fashionImagesBase64 = fashionItems.map(item => imageBufferToBase64(item.image.buffer));
+
+      // Generate virtual try-on using Gemini with all items simultaneously
+      const result = await generateSimultaneousTryOn({
+        modelImageBase64,
+        fashionImagesBase64
+      });
+
+      if (!result.success) {
+        return res.status(500).json({ 
+          error: result.error || "Failed to generate simultaneous try-on result" 
+        });
+      }
+
+      // Create data URLs for the images
+      const modelImageUrl = `data:${modelImage.mimetype};base64,${modelImageBase64}`;
+      const fashionImageUrls = fashionItems.map((item, index) => 
+        `data:${item.image.mimetype};base64,${fashionImagesBase64[index]}`
+      );
+      const resultImageUrl = `data:image/jpeg;base64,${result.resultImageBase64}`;
+
+      // Create a combined fashion item name for display purposes
+      const combinedFashionItemName = fashionItems.map(item => item.name).join(', ');
+      const combinedFashionCategory = 'Combined Outfit';
+
+      // Save the try-on result
+      const tryOnResult = await storage.createTryOnResult({
+        userId: userId || null,
+        modelImageUrl,
+        fashionImageUrl: fashionImageUrls[0], // Use first item's URL for backward compatibility
+        resultImageUrl,
+        fashionItemName: combinedFashionItemName,
+        fashionCategory: combinedFashionCategory,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          modelImageSize: modelImage.size,
+          fashionImageSizes: fashionItems.map(item => item.image.size),
+          fashionImageUrls: fashionImageUrls, // Store all fashion image URLs
+          fashionItems: fashionItems.map(item => ({
+            name: item.name,
+            category: item.category,
+            source: item.source,
+            collectionId: item.collectionId
+          })),
+          generationType: 'simultaneous'
+        }
+      });
+
+      res.json({
+        success: true,
+        result: tryOnResult
+      });
+      
+    } catch (error) {
+      console.error("Error generating simultaneous virtual try-on:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to generate simultaneous try-on result" 
       });
     }
   });
