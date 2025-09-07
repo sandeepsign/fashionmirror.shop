@@ -50,12 +50,19 @@ export async function generateVirtualTryOn({
       };
     }
 
-    const prompt = `Show the person from the first image wearing/using the fashion item from the second image.
+    const prompt = `Show the EXACT SAME PERSON from the first image wearing/using the fashion item from the second image.
 
-Instructions:
+🚨 CRITICAL FACIAL PRESERVATION REQUIREMENTS - FOLLOW EXACTLY:
+- The model's face must remain 100% IDENTICAL to the original image
+- PRESERVE every facial feature: eyes, nose, mouth, cheekbones, jawline, eyebrows
+- Keep the exact same skin tone, eye color, hair color, and facial structure  
+- The person's identity must be completely unchanged - same individual
+- Only clothing should change - NEVER the person's face or identity
+- Do not alter any facial characteristics whatsoever
+- The result must show the SAME PERSON wearing different clothes
+
+CLOTHING & STYLING INSTRUCTIONS:
 - Make the clothing fit naturally with proper shadows and lighting
-- PRESERVE the model's face exactly - same person, same facial features, same identity
-- Keep the model's face completely unchanged - only body pose may vary
 - Ensure the original body proportions are preserved
 - COMPLETELY REMOVE and replace any original clothing that conflicts with the new item - do not layer on top
 - If adding a dress, remove the original dress/top completely and show only the new dress
@@ -63,8 +70,12 @@ Instructions:
 - Create realistic fabric draping and movement
 - Maintain professional studio lighting
 - Use a plain studio background (off-white, light gray, soft blue, or marble texture)
-- Vary the pose naturally - try different angles like slight turns, hand positions, or confident stances
-- The result should look like a high-quality fashion photograph taken in a professional studio`;
+
+POSE & FINAL VERIFICATION:
+- Keep the model's head position and facial angle similar to the original
+- Minor pose adjustments are acceptable but facial identity must remain unchanged
+- The person in the result must be immediately recognizable as the same individual from the original
+- The result should look like a high-quality fashion photograph of the SAME PERSON taken in a professional studio`;
 
     // Try with the correct API structure
     const response = await ai.models.generateContent({
@@ -157,12 +168,18 @@ export async function generateSimultaneousTryOn({
       };
     }
 
-    const prompt = `Create a professional fashion photograph showing the person from the first image wearing all the clothing items from the additional images provided. Apply all fashion items simultaneously to create a complete, cohesive outfit.
+    const prompt = `Create a professional fashion photograph showing the EXACT SAME PERSON from the first image wearing all the clothing items from the additional images provided. Apply all fashion items simultaneously to create a complete, cohesive outfit.
 
-CRITICAL REQUIREMENTS:
-- PRESERVE the model's face exactly - same person, same facial features, same identity
-- Keep the model's face completely unchanged - only body pose may vary slightly
-- Ensure the original body proportions are preserved
+🚨 CRITICAL FACIAL PRESERVATION REQUIREMENTS - FOLLOW EXACTLY:
+- The model's face must remain 100% IDENTICAL to the original image
+- PRESERVE every facial feature: eyes, nose, mouth, cheekbones, jawline, eyebrows
+- Keep the exact same skin tone, eye color, hair color, and facial structure  
+- The person's identity must be completely unchanged - same individual
+- Only clothing should change - NEVER the person's face or identity
+- Do not alter any facial characteristics whatsoever
+- The result must show the SAME PERSON wearing different clothes
+
+CLOTHING REQUIREMENTS:
 - COMPLETELY REMOVE and replace any original clothing that conflicts with the new items - do not layer on top
 - Apply all provided fashion items together to create one complete outfit
 - If multiple items conflict (e.g., multiple tops), intelligently choose the most appropriate combination or blend them cohesively
@@ -190,13 +207,18 @@ BACKGROUND & COMPOSITION:
 - Maintain focus on the model and clothing
 
 POSE & PRESENTATION:
-- Vary the pose naturally while preserving facial features
-- Try confident fashion poses: slight turns, hand positions, or dynamic stances
+- Keep the model's head position and facial angle similar to the original
+- PRESERVE the exact same facial expression or use a neutral expression
 - Ensure the pose showcases the complete outfit effectively
-- Keep the model's identity and facial structure identical to the original
-- Natural, confident expression appropriate for fashion photography
+- The model must be recognizable as the EXACT SAME PERSON from the original image
+- Minor pose adjustments are acceptable but facial identity must remain unchanged
 
-The final result should look like a high-end fashion magazine photograph taken in a professional studio setting.`;
+FINAL VERIFICATION:
+- The person in the result image must be immediately recognizable as the same individual from the original
+- Anyone looking at both images should clearly see it's the same person wearing different clothes
+- If there's any doubt about facial preservation, prioritize keeping the original face over pose changes
+
+The final result should look like a high-end fashion magazine photograph of the SAME PERSON taken in a professional studio setting.`;
 
     // Build the parts array with model image first, then all fashion images
     const parts = [
