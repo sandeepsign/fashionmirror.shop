@@ -63,11 +63,17 @@ FACE PRESERVATION (ABSOLUTELY MANDATORY):
 
 TASK: Take the clothing item from the second image and place it on the SAME PERSON from the first image.
 
-CLOTHING SWAP INSTRUCTIONS:
-- Make the clothing fit naturally with proper shadows and lighting
-- COMPLETELY REMOVE and replace any original clothing that conflicts with the new item
-- If adding a dress, remove the original dress/top completely and show only the new dress
-- If adding a top, remove the original top completely and show only the new top
+CLOTHING APPLICATION RULES:
+- ONLY modify the specific clothing areas that the new item affects
+- PRESERVE all existing clothing that does not conflict with the new item
+- For accessories (hats, jewelry, bags, shoes): ADD them without changing any existing clothing
+- For clothing items: ONLY replace items in the same category
+- If adding a hat: Keep the original dress/outfit completely unchanged
+- If adding shoes: Keep the original outfit completely unchanged  
+- If adding a bag: Keep the original outfit completely unchanged
+- If adding a dress: Only then replace the existing dress/outfit
+- If adding a top: Only replace the existing top, keep bottoms unchanged
+- Make the new item fit naturally with proper shadows and lighting
 - Create realistic fabric draping and movement
 - Professional studio lighting and background
 
@@ -177,11 +183,16 @@ FACE PRESERVATION (ABSOLUTELY MANDATORY):
 
 TASK: Take the clothing items from the additional images and place them on the SAME PERSON from the first image.
 
-CLOTHING SWAP ONLY:
-- COMPLETELY REMOVE and replace any original clothing that conflicts with the new items
-- Apply all provided fashion items together to create one complete outfit  
-- If multiple items conflict, intelligently choose the most appropriate combination
-- Keep the same person's body, just change their clothes
+CLOTHING APPLICATION RULES:
+- ONLY modify the specific clothing areas that the new items affect
+- PRESERVE all existing clothing that does not conflict with the new items
+- For accessories (hats, jewelry, bags, shoes): ADD them without changing any existing clothing
+- For clothing items: ONLY replace items in the same category (dress→dress, top→top, etc.)
+- If adding a hat: Keep the original dress/outfit completely unchanged
+- If adding shoes: Keep the original outfit completely unchanged  
+- If adding a bag: Keep the original outfit completely unchanged
+- If adding a top: Only replace the existing top, keep pants/skirt/dress bottom
+- Apply all provided fashion items while preserving maximum original clothing
 
 PROFESSIONAL QUALITY STANDARDS:
 - Create realistic fabric draping with proper weight and movement
