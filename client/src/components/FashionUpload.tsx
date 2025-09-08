@@ -354,25 +354,21 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
                 
                 {/* Hover Flyout */}
                 {hoveredItemIndex === index && (
-                  <div className="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 z-30 pointer-events-none">
-                    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 max-w-xs">
+                  <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-xl p-4 max-w-sm mx-4">
                       <img 
                         src={url} 
                         alt={`Fashion item ${index + 1} - Full view`}
-                        className="w-full max-h-64 object-contain rounded-lg"
+                        className="w-full max-h-80 object-contain rounded-lg"
                         data-testid={`img-fashion-flyout-${index}`}
                       />
-                      <div className="mt-2 text-center">
+                      <div className="mt-3 text-center">
                         <span className="text-sm font-medium text-gray-800 block">
                           {itemNames[index] || `Item ${index + 1}`}
                         </span>
-                      </div>
-                    </div>
-                    {/* Arrow pointing down */}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-                      <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-200"></div>
-                      <div className="absolute -top-[7px] left-1/2 transform -translate-x-1/2">
-                        <div className="w-0 h-0 border-l-7 border-r-7 border-t-7 border-l-transparent border-r-transparent border-t-white"></div>
+                        <span className="text-xs text-gray-500 mt-1 block">
+                          Hover to view full image
+                        </span>
                       </div>
                     </div>
                   </div>
