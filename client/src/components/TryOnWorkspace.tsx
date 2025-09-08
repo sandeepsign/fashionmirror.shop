@@ -256,32 +256,120 @@ export default function TryOnWorkspace({
             </h3>
             <div className="aspect-[3/4] bg-muted rounded-xl flex items-center justify-center relative">
               {isGenerating ? (
-                <div className="text-center space-y-4">
-                  <div className="spinner mx-auto"></div>
-                  <p className="text-sm text-muted-foreground" data-testid="text-generating">
-                    Generating try-on results...
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {currentGeneratingIndex >= 0 ? 
-                      `Adding ${allFashionItems[currentGeneratingIndex].name} to look...` :
-                      'Preparing generation with selected items...'
-                    }
-                  </p>
-                  <p className="text-xs text-muted-foreground opacity-75">
-                    Step {generationProgress.completed + 1} of {selectedItemsCount}
-                  </p>
-                  <div className="w-32 h-2 bg-border rounded-full mx-auto">
-                    <div 
-                      className="h-2 bg-primary rounded-full transition-all duration-300" 
-                      style={{ 
-                        width: generationProgress.total > 0 ? 
-                          `${(generationProgress.completed / generationProgress.total) * 100}%` : '0%' 
-                      }}
-                    ></div>
+                <div className="space-y-4 p-4 h-full">
+                  {/* Header */}
+                  <div className="text-center space-y-2">
+                    <div className="spinner mx-auto"></div>
+                    <p className="text-sm text-muted-foreground" data-testid="text-generating">
+                      Generating try-on results...
+                    </p>
+                    <p className="text-xs text-muted-foreground opacity-75">
+                      Step {generationProgress.completed + 1} of {selectedItemsCount}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Processing with Gemini 2.5 Flash Image
-                  </p>
+
+                  {/* Fashion Items Status List */}
+                  <div className="space-y-2 flex-1 overflow-y-auto">
+                    {allFashionItems.map((item, index) => {
+                      const isCompleted = index < generationProgress.completed;
+                      const isProcessing = index === currentGeneratingIndex;
+                      const isPending = index > currentGeneratingIndex;
+                      
+                      return (
+                        <div 
+                          key={index}
+                          className={`fashion-status-item flex items-center gap-3 p-3 rounded-lg border transition-all duration-500 ${
+                            isCompleted ? 'bg-green-50 border-green-200' :
+                            isProcessing ? 'bg-blue-50 border-blue-200 animate-pulse' :
+                            'bg-gray-50 border-gray-200'
+                          }`}
+                          data-testid={`status-fashion-item-${index}`}
+                        >
+                          {/* Status Icon */}
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            isCompleted ? 'bg-green-500' :
+                            isProcessing ? 'bg-blue-500' :
+                            'bg-gray-300'
+                          }`}>
+                            {isCompleted ? (
+                              <i className="fas fa-check text-white text-sm"></i>
+                            ) : isProcessing ? (
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <i className="fas fa-clock text-white text-sm"></i>
+                            )}
+                          </div>
+
+                          {/* Fashion Item Image */}
+                          <img 
+                            src={item.source === 'upload' ? 
+                              URL.createObjectURL(item.image) : 
+                              item.source === 'collection' && selectedFashionItems[index] ? 
+                                selectedFashionItems[index].imageUrl : 
+                                '/placeholder-fashion.jpg'
+                            } 
+                            alt={item.name} 
+                            className={`w-12 h-12 object-cover rounded-md flex-shrink-0 transition-all duration-300 ${
+                              isProcessing ? 'ring-2 ring-blue-400 ring-offset-1' : ''
+                            }`}
+                            data-testid={`img-status-fashion-item-${index}`}
+                          />
+
+                          {/* Item Details */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`font-medium text-sm truncate transition-colors duration-300 ${
+                              isCompleted ? 'text-green-700' :
+                              isProcessing ? 'text-blue-700' :
+                              'text-gray-600'
+                            }`}>
+                              {item.name}
+                            </h4>
+                            <p className={`text-xs transition-colors duration-300 ${
+                              isCompleted ? 'text-green-600' :
+                              isProcessing ? 'text-blue-600' :
+                              'text-gray-500'
+                            }`}>
+                              {item.category}
+                            </p>
+                          </div>
+
+                          {/* Status Text */}
+                          <div className="text-right">
+                            <p className={`text-xs font-medium transition-colors duration-300 ${
+                              isCompleted ? 'text-green-700' :
+                              isProcessing ? 'text-blue-700' :
+                              'text-gray-500'
+                            }`}>
+                              {isCompleted ? 'Applied' :
+                               isProcessing ? 'Processing...' :
+                               'Waiting'}
+                            </p>
+                            {isProcessing && (
+                              <p className="text-xs text-blue-600 animate-pulse">
+                                AI Processing
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="w-full h-2 bg-border rounded-full">
+                      <div 
+                        className="h-2 bg-primary rounded-full transition-all duration-300" 
+                        style={{ 
+                          width: generationProgress.total > 0 ? 
+                            `${(generationProgress.completed / generationProgress.total) * 100}%` : '0%' 
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Processing with Gemini 2.5 Flash Image
+                    </p>
+                  </div>
                 </div>
               ) : allFashionItems.length > 0 ? (
                 <div className="p-4 h-full overflow-y-auto space-y-2">
