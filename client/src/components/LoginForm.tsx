@@ -48,7 +48,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
       <CardHeader>
         <CardTitle>Welcome Back</CardTitle>
         <CardDescription>
-          Sign in to your VirtualFit account to continue your fashion journey
+          Sign in to your FashionMirror account to continue your fashion journey
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>

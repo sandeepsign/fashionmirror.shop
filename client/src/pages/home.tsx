@@ -262,7 +262,7 @@ export default function Home() {
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
                 <i className="fas fa-tshirt text-primary"></i>
-                <span className="text-lg font-serif font-bold text-foreground">VirtualFit</span>
+                <span className="text-lg font-serif font-bold text-foreground">FashionMirror</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 The future of fashion try-on, powered by cutting-edge AI technology.
@@ -299,7 +299,7 @@ export default function Home() {
           
           <div className="border-t border-border mt-8 pt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              © 2025 VirtualFit. All rights reserved. Powered by Google Gemini 2.5 Flash Image.
+              © 2025 FashionMirror. All rights reserved. Powered by Google Gemini 2.5 Flash Image.
             </p>
           </div>
         </div>

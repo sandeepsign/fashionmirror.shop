@@ -66,7 +66,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
       <CardHeader>
         <CardTitle>Create Account</CardTitle>
         <CardDescription>
-          Join VirtualFit and start your personalized fashion experience
+          Join FashionMirror and start your personalized fashion experience
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>

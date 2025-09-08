@@ -24,7 +24,7 @@ export default function Navigation() {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <i className="fas fa-tshirt text-primary text-xl"></i>
-              <span className="text-xl font-serif font-bold text-foreground">VirtualFit</span>
+              <span className="text-xl font-serif font-bold text-foreground">FashionMirror</span>
             </div>
           </div>
           
