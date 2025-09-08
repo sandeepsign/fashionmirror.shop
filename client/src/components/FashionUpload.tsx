@@ -326,16 +326,22 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
           </div>
           <div className="grid grid-cols-2 gap-4 max-h-80 overflow-y-auto">
             {previewUrls.map((url, index) => (
-              <div key={index} className="image-preview rounded-lg p-3 relative group" data-testid={`fashion-preview-${index}`}>
+              <div 
+                key={index} 
+                className="image-preview rounded-lg p-3 relative group" 
+                data-testid={`fashion-preview-${index}`}
+                onMouseEnter={() => setHoveredItemIndex(index)}
+                onMouseLeave={() => setHoveredItemIndex(null)}
+              >
                 <img 
                   src={url} 
                   alt={`Fashion item ${index + 1}`}
-                  className="w-full h-32 object-cover rounded-lg"
+                  className="w-full h-32 object-cover rounded-lg cursor-pointer"
                   data-testid={`img-fashion-preview-${index}`}
                 />
                 <button
                   onClick={() => handleRemoveItem(index)}
-                  className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-20"
                   data-testid={`button-remove-item-${index}`}
                 >
                   ×
@@ -345,6 +351,32 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
                     {itemNames[index] || `Item ${index + 1}`}
                   </span>
                 </div>
+                
+                {/* Hover Flyout */}
+                {hoveredItemIndex === index && (
+                  <div className="absolute left-1/2 bottom-full mb-2 transform -translate-x-1/2 z-30 pointer-events-none">
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 max-w-xs">
+                      <img 
+                        src={url} 
+                        alt={`Fashion item ${index + 1} - Full view`}
+                        className="w-full max-h-64 object-contain rounded-lg"
+                        data-testid={`img-fashion-flyout-${index}`}
+                      />
+                      <div className="mt-2 text-center">
+                        <span className="text-sm font-medium text-gray-800 block">
+                          {itemNames[index] || `Item ${index + 1}`}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Arrow pointing down */}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                      <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-200"></div>
+                      <div className="absolute -top-[7px] left-1/2 transform -translate-x-1/2">
+                        <div className="w-0 h-0 border-l-7 border-r-7 border-t-7 border-l-transparent border-r-transparent border-t-white"></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
