@@ -41,6 +41,7 @@ export default function TryOnWorkspace({
   const [modelImageUrl, setModelImageUrl] = useState<string | null>(null);
   const [resultImageUrls, setResultImageUrls] = useState<string[]>([]);
   const [currentGeneratingIndex, setCurrentGeneratingIndex] = useState<number>(-1);
+  const [currentViewingStep, setCurrentViewingStep] = useState(0); // Track which step image is being viewed
   const { toast } = useToast();
 
   // Create preview URL for model image
@@ -121,6 +122,9 @@ export default function TryOnWorkspace({
           // Update UI to show current step result
           setResultImageUrls([...stepResults]);
           
+          // Auto-navigate to the latest generated step
+          setCurrentViewingStep(stepResults.length - 1);
+          
           // Create file from base64 for next step
           if (i < fashionItems.length - 1) {
             const response = await fetch(stepImageUrl);
@@ -151,6 +155,9 @@ export default function TryOnWorkspace({
         };
         
         onResultsGenerated([finalResult]);
+        
+        // Set to final result when generation is complete
+        setCurrentViewingStep(stepResults.length - 1);
         
         toast({
           title: "Try-on complete!",
@@ -183,7 +190,17 @@ export default function TryOnWorkspace({
 
   const handleGenerate = () => {
     setResultImageUrls([]);
+    setCurrentViewingStep(0);
     generateSimultaneousTryOnMutation.mutate();
+  };
+
+  // Navigation functions for step images
+  const goToPreviousStep = () => {
+    setCurrentViewingStep(prev => Math.max(0, prev - 1));
+  };
+
+  const goToNextStep = () => {
+    setCurrentViewingStep(prev => Math.min(resultImageUrls.length - 1, prev + 1));
   };
 
   const handleDownloadFinal = () => {
@@ -319,39 +336,17 @@ export default function TryOnWorkspace({
           {/* Progressive Try-On Results */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-foreground text-center">
-              {isGenerating ? "Building Your Look..." : resultImageUrls.length > 1 ? "Progressive Steps" : "Final Result"}
+              {isGenerating ? "Building Your Look..." : "Progressive Steps"}
             </h3>
             
-            {resultImageUrls.length > 1 ? (
-              // Show all progressive steps
-              <div className="grid grid-cols-2 gap-3">
-                {resultImageUrls.map((imageUrl, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="aspect-[3/4] bg-muted rounded-lg overflow-hidden">
-                      <img 
-                        src={imageUrl} 
-                        alt={`Step ${index + 1} result`} 
-                        className="w-full h-full object-contain"
-                        data-testid={`img-step-${index + 1}-result`}
-                      />
-                    </div>
-                    <p className="text-xs text-center text-muted-foreground font-medium">
-                      Step {index + 1}
-                      {index === resultImageUrls.length - 1 && (
-                        <span className="ml-1 text-primary">(Final)</span>
-                      )}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              // Show single result or placeholder
+            <div className="relative">
+              {/* Single Image Display */}
               <div className="aspect-[3/4] bg-muted rounded-xl flex items-center justify-center">
                 {resultImageUrls.length > 0 ? (
                   <div className="relative w-full h-full">
                     <img 
-                      src={resultImageUrls[0]} 
-                      alt="Progressive try-on result" 
+                      src={resultImageUrls[currentViewingStep] || resultImageUrls[resultImageUrls.length - 1]} 
+                      alt={`Step ${currentViewingStep + 1} result`} 
                       className="w-full h-full object-contain rounded-xl"
                       data-testid="img-progressive-result"
                     />
@@ -379,6 +374,59 @@ export default function TryOnWorkspace({
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Navigation Controls - Only show if multiple results exist */}
+              {resultImageUrls.length > 1 && (
+                <>
+                  {/* Left Arrow */}
+                  <button
+                    onClick={goToPreviousStep}
+                    disabled={currentViewingStep === 0}
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    data-testid="btn-previous-step"
+                  >
+                    <i className="fas fa-chevron-left text-sm"></i>
+                  </button>
+
+                  {/* Right Arrow */}
+                  <button
+                    onClick={goToNextStep}
+                    disabled={currentViewingStep === resultImageUrls.length - 1}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    data-testid="btn-next-step"
+                  >
+                    <i className="fas fa-chevron-right text-sm"></i>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Step Indicator */}
+            {resultImageUrls.length > 1 && (
+              <div className="text-center space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  Step {currentViewingStep + 1} of {resultImageUrls.length}
+                  {currentViewingStep === resultImageUrls.length - 1 && (
+                    <span className="ml-1 text-primary">(Final)</span>
+                  )}
+                </p>
+                
+                {/* Step Dots Indicator */}
+                <div className="flex justify-center space-x-2">
+                  {resultImageUrls.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentViewingStep(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentViewingStep
+                          ? 'bg-primary'
+                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                      }`}
+                      data-testid={`step-dot-${index + 1}`}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>
