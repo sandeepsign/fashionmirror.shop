@@ -91,8 +91,8 @@ export default function TryOnWorkspace({
       setCurrentGeneratingIndex(0); // Show first item as generating
       
       try {
-        // Generate all items simultaneously
-        const response = await apiClient.generateSimultaneousTryOn({
+        // Generate all items progressively (one by one)
+        const response = await apiClient.generateProgressiveTryOn({
           modelImage: modelImage!,
           fashionItems: fashionItems,
           userId: 'demo-user'
@@ -107,16 +107,16 @@ export default function TryOnWorkspace({
           
           toast({
             title: "Try-on complete!",
-            description: `Successfully applied ${fashionItems.length} fashion item${fashionItems.length > 1 ? 's' : ''} simultaneously.`,
+            description: `Successfully applied ${fashionItems.length} fashion item${fashionItems.length > 1 ? 's' : ''} progressively.`,
           });
         } else {
-          throw new Error(response.error || 'Failed to generate simultaneous try-on');
+          throw new Error(response.error || 'Failed to generate progressive try-on');
         }
       } catch (error) {
-        console.error('Failed to generate simultaneous try-on:', error);
+        console.error('Failed to generate progressive try-on:', error);
         toast({
           title: "Generation Failed",
-          description: error instanceof Error ? error.message : "Failed to generate simultaneous try-on",
+          description: error instanceof Error ? error.message : "Failed to generate progressive try-on",
           variant: "destructive",
         });
       }

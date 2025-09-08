@@ -138,6 +138,40 @@ export class APIClient {
     return response.json();
   }
 
+  async generateProgressiveTryOn(request: GenerateSimultaneousTryOnRequest): Promise<SimultaneousTryOnResult> {
+    const formData = new FormData();
+    
+    // Append model image first
+    formData.append('files', request.modelImage);
+    
+    // Append fashion item images
+    request.fashionItems.forEach((item, index) => {
+      formData.append('files', item.image);
+      formData.append(`fashionItems[${index}][name]`, item.name);
+      formData.append(`fashionItems[${index}][category]`, item.category);
+      formData.append(`fashionItems[${index}][source]`, item.source);
+      if (item.collectionId) {
+        formData.append(`fashionItems[${index}][collectionId]`, item.collectionId);
+      }
+    });
+    
+    if (request.userId) {
+      formData.append('userId', request.userId);
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/try-on/generate-progressive`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to generate progressive try-on');
+    }
+
+    return response.json();
+  }
+
   async generateSimultaneousTryOn(request: GenerateSimultaneousTryOnRequest): Promise<SimultaneousTryOnResult> {
     const formData = new FormData();
     
