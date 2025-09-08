@@ -50,7 +50,7 @@ Focus on:
       }]
     });
 
-    const text = result.text || result.response?.text() || "Could not parse AI response";
+    const text = result.text || result.response?.text?.() || result.response?.candidates?.[0]?.content?.parts?.[0]?.text || "Could not parse AI response";
     
     // Parse JSON response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
