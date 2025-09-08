@@ -87,45 +87,75 @@ export default function TryOnWorkspace({
     },
     onSuccess: async ({ fashionItems }) => {
       onGenerationStart();
-      onGenerationProgress(0, 1); // Single step for simultaneous generation
-      setCurrentGeneratingIndex(0); // Show first item as generating
+      onGenerationProgress(0, fashionItems.length);
       
       try {
-        // Generate all items progressively (one by one)
-        const response = await apiClient.generateProgressiveTryOn({
-          modelImage: modelImage!,
-          fashionItems: fashionItems,
-          userId: 'demo-user'
+        const stepResults: string[] = [];
+        let currentModelImage = modelImage!;
+        
+        // Generate each step sequentially
+        for (let i = 0; i < fashionItems.length; i++) {
+          const item = fashionItems[i];
+          setCurrentGeneratingIndex(i);
+          
+          console.log(`Starting step ${i + 1}: ${item.name}`);
+          
+          // Generate this step using the result from the previous step as input
+          const stepResponse = await apiClient.generateProgressiveStep({
+            modelImage: currentModelImage,
+            fashionImage: item.image,
+            fashionItemName: item.name,
+            fashionCategory: item.category,
+            stepNumber: i + 1,
+            userId: 'demo-user'
+          });
+          
+          if (!stepResponse.success) {
+            throw new Error(stepResponse.error || `Failed to generate step ${i + 1}`);
+          }
+          
+          // Convert base64 result to blob and create File for next step
+          const stepImageUrl = `data:image/jpeg;base64,${stepResponse.resultImageBase64}`;
+          stepResults.push(stepImageUrl);
+          
+          // Update UI to show current step result
+          setResultImageUrls([...stepResults]);
+          
+          // Create file from base64 for next step
+          if (i < fashionItems.length - 1) {
+            const response = await fetch(stepImageUrl);
+            const blob = await response.blob();
+            currentModelImage = new File([blob], `step-${i + 1}-result.jpg`, { type: 'image/jpeg' });
+          }
+          
+          onGenerationProgress(i + 1, fashionItems.length);
+          
+          console.log(`Completed step ${i + 1}: ${item.name}`);
+        }
+        
+        // Create final result object
+        const finalResult = {
+          id: `progressive-${Date.now()}`,
+          userId: 'demo-user',
+          modelImageUrl: URL.createObjectURL(modelImage!),
+          fashionImageUrl: stepResults[stepResults.length - 1],
+          resultImageUrl: stepResults[stepResults.length - 1],
+          fashionItemName: fashionItems.map(item => item.name).join(' + '),
+          fashionCategory: fashionItems.map(item => item.category).join(', '),
+          metadata: {
+            timestamp: new Date().toISOString(),
+            generationType: 'progressive-step-by-step',
+            stepResults: stepResults
+          }
+        };
+        
+        onResultsGenerated([finalResult]);
+        
+        toast({
+          title: "Try-on complete!",
+          description: `Successfully applied ${fashionItems.length} fashion item${fashionItems.length > 1 ? 's' : ''} progressively in ${stepResults.length} steps.`,
         });
         
-        if (response.success && response.result) {
-          // Show all step results (intermediate + final)
-          const allResultUrls: string[] = [];
-          
-          // Add intermediate step results
-          if (response.stepResults && response.stepResults.length > 0) {
-            response.stepResults.forEach((stepResult: string, index: number) => {
-              allResultUrls.push(`data:image/jpeg;base64,${stepResult}`);
-            });
-          }
-          
-          // Add final result if it's different from the last step
-          if (!response.stepResults || response.stepResults.length === 0) {
-            allResultUrls.push(response.result.resultImageUrl);
-          }
-          
-          setResultImageUrls(allResultUrls);
-          onResultsGenerated([response.result]);
-          
-          onGenerationProgress(1, 1);
-          
-          toast({
-            title: "Try-on complete!",
-            description: `Successfully applied ${fashionItems.length} fashion item${fashionItems.length > 1 ? 's' : ''} progressively${allResultUrls.length > 1 ? ` in ${allResultUrls.length} steps` : ''}.`,
-          });
-        } else {
-          throw new Error(response.error || 'Failed to generate progressive try-on');
-        }
       } catch (error) {
         console.error('Failed to generate progressive try-on:', error);
         toast({
