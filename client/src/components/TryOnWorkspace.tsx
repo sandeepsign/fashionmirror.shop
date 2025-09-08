@@ -42,6 +42,7 @@ export default function TryOnWorkspace({
   const [resultImageUrls, setResultImageUrls] = useState<string[]>([]);
   const [currentGeneratingIndex, setCurrentGeneratingIndex] = useState<number>(-1);
   const [currentViewingStep, setCurrentViewingStep] = useState(0); // Track which step image is being viewed
+  const [showStatusView, setShowStatusView] = useState(false); // Track whether to show status view
   const { toast } = useToast();
 
   // Create preview URL for model image
@@ -88,6 +89,7 @@ export default function TryOnWorkspace({
     },
     onSuccess: async ({ fashionItems }) => {
       onGenerationStart();
+      setShowStatusView(true); // Show status view when generation starts
       onGenerationProgress(0, fashionItems.length);
       
       try {
@@ -175,6 +177,7 @@ export default function TryOnWorkspace({
       
       setCurrentGeneratingIndex(-1);
       onGenerationEnd();
+      // Keep showStatusView true after completion - don't reset it here
     },
     onError: (error) => {
       console.error("Batch try-on generation failed:", error);
@@ -191,6 +194,7 @@ export default function TryOnWorkspace({
   const handleGenerate = () => {
     setResultImageUrls([]);
     setCurrentViewingStep(0);
+    setShowStatusView(false); // Reset status view when Generate is clicked
     generateSimultaneousTryOnMutation.mutate();
   };
 
@@ -252,28 +256,30 @@ export default function TryOnWorkspace({
           {/* Processing/Results */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-foreground text-center">
-              {isGenerating ? "AI Processing" : "Fashion Items"}
+              {isGenerating ? "AI Processing" : showStatusView ? "Generation Complete" : "Fashion Items"}
             </h3>
             <div className="aspect-[3/4] bg-muted rounded-xl flex items-center justify-center relative">
-              {isGenerating ? (
+              {isGenerating || showStatusView ? (
                 <div className="space-y-4 p-4 h-full">
                   {/* Header */}
                   <div className="text-center space-y-2">
-                    <div className="spinner mx-auto"></div>
+                    {isGenerating && <div className="spinner mx-auto"></div>}
                     <p className="text-sm text-muted-foreground" data-testid="text-generating">
-                      Generating try-on results...
+                      {isGenerating ? "Generating try-on results..." : "All items successfully applied!"}
                     </p>
-                    <p className="text-xs text-muted-foreground opacity-75">
-                      Step {generationProgress.completed + 1} of {selectedItemsCount}
-                    </p>
+                    {isGenerating && (
+                      <p className="text-xs text-muted-foreground opacity-75">
+                        Step {generationProgress.completed + 1} of {selectedItemsCount}
+                      </p>
+                    )}
                   </div>
 
                   {/* Fashion Items Status List */}
                   <div className="space-y-2 flex-1 overflow-y-auto">
                     {allFashionItems.map((item, index) => {
-                      const isCompleted = index < generationProgress.completed;
-                      const isProcessing = index === currentGeneratingIndex;
-                      const isPending = index > currentGeneratingIndex;
+                      const isCompleted = showStatusView && !isGenerating ? true : index < generationProgress.completed;
+                      const isProcessing = isGenerating && index === currentGeneratingIndex;
+                      const isPending = isGenerating && index > currentGeneratingIndex;
                       
                       return (
                         <div 
