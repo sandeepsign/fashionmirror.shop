@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { apiClient } from "@/lib/api";
 
 interface FashionUploadProps {
   onImagesSelect: (files: File[]) => void;
@@ -12,6 +13,8 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
   const [dragActive, setDragActive] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [itemNames, setItemNames] = useState<string[]>([]);
+  const [itemCategories, setItemCategories] = useState<string[]>([]);
+  const [analyzingItems, setAnalyzingItems] = useState<boolean[]>([]);
   const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -37,13 +40,63 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
     }
   };
 
-  const handleFileSelect = (files: FileList) => {
+  const handleFileSelect = async (files: FileList) => {
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     if (imageFiles.length > 0) {
       onImagesSelect(imageFiles);
       const urls = imageFiles.map(file => URL.createObjectURL(file));
       setPreviewUrls(urls);
-      setItemNames(imageFiles.map(file => file.name.split('.')[0]));
+      
+      // Initialize arrays for the new files
+      const initialNames = imageFiles.map(file => file.name.split('.')[0]);
+      const initialCategories = imageFiles.map(() => 'Analyzing...');
+      const analyzingStates = imageFiles.map(() => true);
+      
+      setItemNames(initialNames);
+      setItemCategories(initialCategories);
+      setAnalyzingItems(analyzingStates);
+      
+      // Analyze each image with AI
+      imageFiles.forEach(async (file, index) => {
+        try {
+          const analysis = await apiClient.analyzeFashionImage(file);
+          
+          // Update the specific item's data
+          setItemNames(prev => {
+            const newNames = [...prev];
+            newNames[index] = analysis.name;
+            return newNames;
+          });
+          
+          setItemCategories(prev => {
+            const newCategories = [...prev];
+            newCategories[index] = analysis.category;
+            return newCategories;
+          });
+          
+          setAnalyzingItems(prev => {
+            const newAnalyzing = [...prev];
+            newAnalyzing[index] = false;
+            return newAnalyzing;
+          });
+          
+        } catch (error) {
+          console.error('Failed to analyze image:', error);
+          
+          // Set fallback values on error
+          setItemCategories(prev => {
+            const newCategories = [...prev];
+            newCategories[index] = 'Fashion Item';
+            return newCategories;
+          });
+          
+          setAnalyzingItems(prev => {
+            const newAnalyzing = [...prev];
+            newAnalyzing[index] = false;
+            return newAnalyzing;
+          });
+        }
+      });
     }
   };
 
@@ -61,6 +114,8 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
   const handleChangeItems = () => {
     setPreviewUrls([]);
     setItemNames([]);
+    setItemCategories([]);
+    setAnalyzingItems([]);
     onImagesSelect([]);
     if (inputRef.current) {
       inputRef.current.value = '';
@@ -70,11 +125,38 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
   const handleRemoveItem = (index: number) => {
     const newUrls = previewUrls.filter((_, i) => i !== index);
     const newNames = itemNames.filter((_, i) => i !== index);
+    const newCategories = itemCategories.filter((_, i) => i !== index);
+    const newAnalyzing = analyzingItems.filter((_, i) => i !== index);
     const newFiles = selectedImages.filter((_, i) => i !== index);
     
     setPreviewUrls(newUrls);
     setItemNames(newNames);
+    setItemCategories(newCategories);
+    setAnalyzingItems(newAnalyzing);
     onImagesSelect(newFiles);
+  };
+
+  const handleSaveToCollection = async (index: number) => {
+    try {
+      const file = selectedImages[index];
+      const name = itemNames[index];
+      const category = itemCategories[index];
+      
+      await apiClient.saveFashionItem(file, name, category);
+      
+      toast({
+        title: "Saved to Collection!",
+        description: `${name} has been added to your browsable fashion collection.`,
+      });
+      
+    } catch (error) {
+      console.error('Failed to save to collection:', error);
+      toast({
+        title: "Save Failed",
+        description: "Could not save the item to your collection. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePasteButton = async () => {
@@ -346,10 +428,35 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
                 >
                   ×
                 </button>
-                <div className="mt-2">
+                <div className="mt-2 space-y-1">
                   <span className="text-xs font-medium text-foreground truncate block" data-testid={`text-fashion-name-${index}`}>
-                    {itemNames[index] || `Item ${index + 1}`}
+                    {analyzingItems[index] ? (
+                      <span className="flex items-center gap-1">
+                        <i className="fas fa-sparkles animate-pulse text-primary"></i>
+                        AI Analyzing...
+                      </span>
+                    ) : (
+                      itemNames[index] || `Item ${index + 1}`
+                    )}
                   </span>
+                  <span className="text-xs text-muted-foreground block">
+                    {itemCategories[index] || 'Unknown Category'}
+                  </span>
+                  {!analyzingItems[index] && itemCategories[index] && itemCategories[index] !== 'Unknown Category' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs bg-primary/10 hover:bg-primary/20 text-primary border-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveToCollection(index);
+                      }}
+                      data-testid={`button-save-collection-${index}`}
+                    >
+                      <i className="fas fa-plus mr-1 text-[10px]"></i>
+                      Add to Collection
+                    </Button>
+                  )}
                 </div>
                 
                 {/* Hover Flyout */}

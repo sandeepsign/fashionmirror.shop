@@ -257,6 +257,41 @@ export class APIClient {
     return response.json();
   }
 
+  async analyzeFashionImage(imageFile: File): Promise<{ name: string; category: string; description?: string }> {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const response = await fetch(`${this.baseUrl}/api/fashion-items/analyze`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to analyze fashion image');
+    }
+    return response.json();
+  }
+
+  async saveFashionItem(imageFile: File, name: string, category: string, description?: string): Promise<FashionItem> {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    formData.append('name', name);
+    formData.append('category', category);
+    if (description) {
+      formData.append('description', description);
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/fashion-items`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save fashion item');
+    }
+    return response.json();
+  }
+
   async healthCheck(): Promise<any> {
     const response = await fetch(`${this.baseUrl}/api/health`);
     if (!response.ok) {

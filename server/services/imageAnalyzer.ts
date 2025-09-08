@@ -15,7 +15,6 @@ export async function analyzeImageWithAI(imageBuffer: Buffer): Promise<ImageAnal
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
     const base64Image = imageBufferToBase64(imageBuffer);
 
@@ -36,24 +35,22 @@ Focus on:
 - Keep names concise but descriptive
 `;
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: base64Image
-              }
+    const result = await ai.models.generateContent({
+      model: "gemini-2.5-flash-image-preview",
+      contents: [{
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              data: base64Image,
+              mimeType: "image/jpeg",
             },
-            { text: prompt }
-          ]
-        }
-      ]
+          }
+        ]
+      }]
     });
 
-    const text = result.response.text();
+    const text = result.text || result.response?.text() || "Could not parse AI response";
     
     // Parse JSON response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
