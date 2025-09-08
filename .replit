@@ -15,10 +15,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "VirtualFit Development Server"
+args = "FashionMirror Development Server"
 
 [[workflows.workflow]]
-name = "VirtualFit Development Server"
+name = "FashionMirror Development Server"
 author = "agent"
 
 [[workflows.workflow.tasks]]
