@@ -12,6 +12,7 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
   const [dragActive, setDragActive] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [itemNames, setItemNames] = useState<string[]>([]);
+  const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
