@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertTryOnResultSchema, registerUserSchema, loginUserSchema } from "@shared/schema";
 import { generateVirtualTryOn, generateSimultaneousTryOn, generateProgressiveTryOn, imageBufferToBase64 } from "./services/gemini";
+import { analyzeImageWithAI } from "./services/imageAnalyzer";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import { z } from "zod";
@@ -636,6 +637,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching fashion item:", error);
       res.status(500).json({ error: "Failed to fetch fashion item" });
+    }
+  });
+
+  // Analyze uploaded fashion image with AI
+  app.post("/api/fashion-items/analyze", upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      const analysis = await analyzeImageWithAI(req.file.buffer);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error analyzing fashion image:", error);
+      res.status(500).json({ error: "Failed to analyze image" });
+    }
+  });
+
+  // Save analyzed fashion item to collection
+  app.post("/api/fashion-items", upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      const { name, category, description } = req.body;
+      
+      if (!name || !category) {
+        return res.status(400).json({ error: "Name and category are required" });
+      }
+
+      // Convert image to base64 for storage
+      const imageBase64 = imageBufferToBase64(req.file.buffer);
+      const imageUrl = `data:image/jpeg;base64,${imageBase64}`;
+
+      const newItem = await storage.createFashionItem({
+        name,
+        category,
+        imageUrl,
+        description: description || `User uploaded: ${name}`
+      });
+
+      res.status(201).json(newItem);
+    } catch (error) {
+      console.error("Error saving fashion item:", error);
+      res.status(500).json({ error: "Failed to save fashion item" });
     }
   });
 
