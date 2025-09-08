@@ -380,8 +380,22 @@ export default function TryOnWorkspace({
                       ></div>
                     </div>
                     <p className="text-xs text-muted-foreground text-center">
-                      Processing with Gemini 2.5 Flash Image
+                      {isGenerating ? "Processing with Gemini 2.5 Flash Image" : "Processing Complete"}
                     </p>
+                    {!isGenerating && showStatusView && (
+                      <div className="text-center mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs px-4 py-1 h-7 border-muted-foreground/20 hover:bg-muted"
+                          onClick={() => setShowStatusView(false)}
+                          data-testid="button-clear-status"
+                        >
+                          <i className="fas fa-times mr-1 text-[10px]"></i>
+                          Clear List
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : allFashionItems.length > 0 ? (
