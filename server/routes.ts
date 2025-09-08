@@ -388,6 +388,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate single step of progressive try-on
+  app.post("/api/try-on/generate-step", upload.fields([
+    { name: 'modelImage', maxCount: 1 },
+    { name: 'fashionImage', maxCount: 1 }
+  ]), async (req, res) => {
+    try {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const { fashionItemName, fashionCategory, userId, stepNumber } = req.body;
+
+      if (!files.modelImage || !files.fashionImage) {
+        return res.status(400).json({ error: "Both model and fashion images are required" });
+      }
+
+      if (!fashionItemName || !fashionCategory) {
+        return res.status(400).json({ error: "Fashion item name and category are required" });
+      }
+
+      const modelImage = files.modelImage[0];
+      const fashionImage = files.fashionImage[0];
+
+      console.log(`Generating step ${stepNumber || '1'}: Processing ${fashionItemName}`);
+
+      // Convert images to base64
+      const modelImageBase64 = imageBufferToBase64(modelImage.buffer);
+      const fashionImageBase64 = imageBufferToBase64(fashionImage.buffer);
+
+      // Generate virtual try-on for this step
+      const result = await generateVirtualTryOn({
+        modelImageBase64,
+        fashionImageBase64,
+        fashionItemName,
+        fashionCategory
+      });
+
+      if (!result.success) {
+        return res.status(500).json({ error: result.error || "Failed to generate try-on result" });
+      }
+
+      console.log(`Step ${stepNumber || '1'} completed successfully`);
+
+      res.json({
+        success: true,
+        stepNumber: parseInt(stepNumber) || 1,
+        resultImageBase64: result.resultImageBase64
+      });
+      
+    } catch (error) {
+      console.error("Error generating progressive step:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to generate progressive step" 
+      });
+    }
+  });
+
   // Progressive try-on endpoint (applies fashion items one by one)
   app.post("/api/try-on/generate-progressive", upload.array('files'), async (req, res) => {
     try {

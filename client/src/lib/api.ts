@@ -50,6 +50,22 @@ export interface SimultaneousTryOnResult {
   stepResults?: string[]; // Array of base64 encoded intermediate results
 }
 
+export interface ProgressiveStepRequest {
+  modelImage: File;
+  fashionImage: File;
+  fashionItemName: string;
+  fashionCategory: string;
+  stepNumber: number;
+  userId?: string;
+}
+
+export interface ProgressiveStepResult {
+  success: boolean;
+  stepNumber: number;
+  resultImageBase64: string;
+  error?: string;
+}
+
 export class APIClient {
   private baseUrl: string;
 
@@ -168,6 +184,32 @@ export class APIClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to generate progressive try-on');
+    }
+
+    return response.json();
+  }
+
+  async generateProgressiveStep(request: ProgressiveStepRequest): Promise<ProgressiveStepResult> {
+    const formData = new FormData();
+    
+    formData.append('modelImage', request.modelImage);
+    formData.append('fashionImage', request.fashionImage);
+    formData.append('fashionItemName', request.fashionItemName);
+    formData.append('fashionCategory', request.fashionCategory);
+    formData.append('stepNumber', request.stepNumber.toString());
+    
+    if (request.userId) {
+      formData.append('userId', request.userId);
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/try-on/generate-step`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to generate progressive step');
     }
 
     return response.json();
