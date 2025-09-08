@@ -56,6 +56,13 @@ export default function TryOnWorkspace({
     }
   }, [modelImage]);
 
+  // Reset status view when fashion items change (new items added/removed)
+  useEffect(() => {
+    if (allFashionItems.length > 0) {
+      setShowStatusView(false); // Reset status view when items change
+    }
+  }, [allFashionItems.length]);
+
   const generateSimultaneousTryOnMutation = useMutation({
     mutationFn: async () => {
       const selectedItems = getSelectedFashionItems();
