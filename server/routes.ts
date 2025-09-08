@@ -487,7 +487,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         success: true,
-        result: tryOnResult
+        result: tryOnResult,
+        stepResults: result.stepResults // Include intermediate step images
       });
       
     } catch (error) {

@@ -47,6 +47,7 @@ export interface SimultaneousTryOnResult {
   success: boolean;
   result?: TryOnResult;
   error?: string;
+  stepResults?: string[]; // Array of base64 encoded intermediate results
 }
 
 export class APIClient {

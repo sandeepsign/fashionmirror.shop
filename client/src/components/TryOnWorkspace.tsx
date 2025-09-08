@@ -99,15 +99,29 @@ export default function TryOnWorkspace({
         });
         
         if (response.success && response.result) {
-          // Show the single final result
-          setResultImageUrls([response.result.resultImageUrl]);
+          // Show all step results (intermediate + final)
+          const allResultUrls: string[] = [];
+          
+          // Add intermediate step results
+          if (response.stepResults && response.stepResults.length > 0) {
+            response.stepResults.forEach((stepResult: string, index: number) => {
+              allResultUrls.push(`data:image/jpeg;base64,${stepResult}`);
+            });
+          }
+          
+          // Add final result if it's different from the last step
+          if (!response.stepResults || response.stepResults.length === 0) {
+            allResultUrls.push(response.result.resultImageUrl);
+          }
+          
+          setResultImageUrls(allResultUrls);
           onResultsGenerated([response.result]);
           
           onGenerationProgress(1, 1);
           
           toast({
             title: "Try-on complete!",
-            description: `Successfully applied ${fashionItems.length} fashion item${fashionItems.length > 1 ? 's' : ''} progressively.`,
+            description: `Successfully applied ${fashionItems.length} fashion item${fashionItems.length > 1 ? 's' : ''} progressively${allResultUrls.length > 1 ? ` in ${allResultUrls.length} steps` : ''}.`,
           });
         } else {
           throw new Error(response.error || 'Failed to generate progressive try-on');
@@ -271,45 +285,71 @@ export default function TryOnWorkspace({
             </div>
           </div>
           
-          {/* Progressive Try-On Result */}
+          {/* Progressive Try-On Results */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-foreground text-center">
-              {isGenerating ? "Building Your Look..." : "Final Result"}
+              {isGenerating ? "Building Your Look..." : resultImageUrls.length > 1 ? "Progressive Steps" : "Final Result"}
             </h3>
-            <div className="aspect-[3/4] bg-muted rounded-xl flex items-center justify-center">
-              {resultImageUrls.length > 0 ? (
-                <div className="relative w-full h-full">
-                  <img 
-                    src={resultImageUrls[resultImageUrls.length - 1]} 
-                    alt="Progressive try-on result" 
-                    className="w-full h-full object-contain rounded-xl"
-                    data-testid="img-progressive-result"
-                  />
-                  {isGenerating && (
-                    <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-xs font-medium">
-                      {generationProgress.completed}/{generationProgress.total} items
+            
+            {resultImageUrls.length > 1 ? (
+              // Show all progressive steps
+              <div className="grid grid-cols-2 gap-3">
+                {resultImageUrls.map((imageUrl, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="aspect-[3/4] bg-muted rounded-lg overflow-hidden">
+                      <img 
+                        src={imageUrl} 
+                        alt={`Step ${index + 1} result`} 
+                        className="w-full h-full object-contain"
+                        data-testid={`img-step-${index + 1}-result`}
+                      />
                     </div>
-                  )}
-                  {!isGenerating && allFashionItems.length > 1 && (
-                    <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded-md text-xs">
-                      Wearing {allFashionItems.length} items
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center space-y-2">
-                  <i className="fas fa-magic text-muted-foreground text-4xl"></i>
-                  <p className="text-sm text-muted-foreground" data-testid="text-no-result">
-                    {(modelImage && selectedItemsCount > 0) ? "Ready to build your look" : "Waiting for inputs"}
-                  </p>
-                  {selectedItemsCount > 1 && modelImage && (
-                    <p className="text-xs text-muted-foreground">
-                      Will layer {selectedItemsCount} items progressively
+                    <p className="text-xs text-center text-muted-foreground font-medium">
+                      Step {index + 1}
+                      {index === resultImageUrls.length - 1 && (
+                        <span className="ml-1 text-primary">(Final)</span>
+                      )}
                     </p>
-                  )}
-                </div>
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // Show single result or placeholder
+              <div className="aspect-[3/4] bg-muted rounded-xl flex items-center justify-center">
+                {resultImageUrls.length > 0 ? (
+                  <div className="relative w-full h-full">
+                    <img 
+                      src={resultImageUrls[0]} 
+                      alt="Progressive try-on result" 
+                      className="w-full h-full object-contain rounded-xl"
+                      data-testid="img-progressive-result"
+                    />
+                    {isGenerating && (
+                      <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-xs font-medium">
+                        {generationProgress.completed}/{generationProgress.total} items
+                      </div>
+                    )}
+                    {!isGenerating && allFashionItems.length > 1 && (
+                      <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded-md text-xs">
+                        Wearing {allFashionItems.length} items
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center space-y-2">
+                    <i className="fas fa-magic text-muted-foreground text-4xl"></i>
+                    <p className="text-sm text-muted-foreground" data-testid="text-no-result">
+                      {(modelImage && selectedItemsCount > 0) ? "Ready to build your look" : "Waiting for inputs"}
+                    </p>
+                    {selectedItemsCount > 1 && modelImage && (
+                      <p className="text-xs text-muted-foreground">
+                        Will layer {selectedItemsCount} items progressively
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         
