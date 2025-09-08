@@ -136,6 +136,7 @@ export default function TryOnWorkspace({
         // Create final result object
         const finalResult = {
           id: `progressive-${Date.now()}`,
+          createdAt: new Date(),
           userId: 'demo-user',
           modelImageUrl: URL.createObjectURL(modelImage!),
           fashionImageUrl: stepResults[stepResults.length - 1],
