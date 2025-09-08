@@ -1,0 +1,38 @@
+The Challenge: Your mission is to build a product, application, or demo that showcases one or more of these core strengths. Think beyond simple text-to-image. How can these advanced features create a magical user experience?
+
+Consider applications that:
+
+Enhance dynamic storytelling (e.g., consistent character comics).
+Revolutionize e-commerce (e.g., virtual room placement or product visualization).
+Automate creative workflows (e.g., personalized marketing assets at scale).
+Build the next generation of natural language photo editors.
+Accelerate Your Build: Leverage AI Studio Apps
+
+We encourage participants to leverage AI Studio apps. In the Build tab of AI Studio, you can easily and quickly build advanced applications with the Gemini API, allowing you to move rapidly from idea to function prototype. AI Studio apps can quickly be re-mixed, saved to GitHub or deploy to Cloud Run. You can also find existing templates to get started.
+
+API Limitations
+
+Please note the special tier for the Gemini API will allow 20 images per minute and 500 requests per project per day. Developers using a paid API key will pay for all their usage. To get the free 500 generations, please use a free tier API key.
+
+Evaluation
+Show, Don't Just Tell. Your project will be judged primarily on your video demo. This is your chance to create something exciting and compelling. We want to see the "wow" factor, the utility of your application, and the technical skill behind it.
+
+Submission Requirements:
+Your complete submission via the Kaggle platform must include the following:
+
+1) The Video Demo (2 minutes or less): An engaging video demonstrating your project in action. It must be posted publicly (YouTube, X/Twitter, etc.) and a direct link provided. It must be viewable by the judges without requiring a login.
+
+2) Public Project Link: A URL to your working product or interactive demo. Consider using AI Studio apps, which are the fastest way to build prototypes using the Gemini API. This allows judges to experience your project firsthand, if applicable. It should be publicly accessible and not require a login or paywall. If a live demo is not feasible, a link to your public code repository (e.g., GitHub) is required, including detailed setup instructions.
+
+3) Gemini Integration Writeup: A brief write-up (max 200 words) detailing which Gemini 2.5 Flash Image features were used and how they are central to the application.
+
+Judging Criteria:
+Innovation and "Wow" Factor (40%): How creative and novel is the application? Does it leverage Gemini 2.5 Flash Image in a way that wasn't previously possible?
+
+Technical Execution and Functionality (30%): Does the application work? How effectively does it utilize the API's advanced features (consistency, fusion, editing)?
+
+Potential Impact and Utility (20%): Does the application solve a real-world problem (creative, commercial, or educational)?
+
+Presentation Quality (10%): Clarity, storytelling, and engagement of the video demo.
+
+For the Special Technology Prizes, these same criteria will be applied with a focus on how that specific technology (ElevenLabs and Fal) was pivotal in achieving the project's impact and technical excellence.
