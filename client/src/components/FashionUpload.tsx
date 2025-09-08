@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 
 interface FashionUploadProps {
@@ -18,6 +19,7 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
   const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -143,6 +145,9 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
       const category = itemCategories[index];
       
       await apiClient.saveFashionItem(file, name, category);
+      
+      // Invalidate and refetch the fashion items cache to show the new item immediately
+      await queryClient.invalidateQueries({ queryKey: ["/api/fashion-items"] });
       
       toast({
         title: "Saved to Collection!",
