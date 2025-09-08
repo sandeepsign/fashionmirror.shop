@@ -1,8 +1,8 @@
-# VirtualFit - AI-Powered Fashion Try-On Application
+# FashionMirror - AI-Powered Fashion Try-On Application
 
 ## Overview
 
-VirtualFit is a modern web application that leverages Google Gemini's AI image generation capabilities to provide virtual fashion try-on experiences. Users can upload their photos and see how different clothing items would look on them using advanced AI image processing. The application features a curated fashion collection and supports custom fashion item uploads, creating personalized styling experiences.
+FashionMirror is a modern web application that leverages Google Gemini's AI image generation capabilities to provide virtual fashion try-on experiences. Users can upload their photos and see how different clothing items would look on them using advanced AI image processing. The application features a curated fashion collection and supports custom fashion item uploads, creating personalized styling experiences.
 
 ## User Preferences
 
