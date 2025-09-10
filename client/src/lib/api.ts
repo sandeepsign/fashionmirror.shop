@@ -73,27 +73,30 @@ export class APIClient {
     this.baseUrl = import.meta.env.VITE_API_BASE_URL || '';
   }
 
-  async getFashionItems(userId?: string): Promise<FashionItem[]> {
-    const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-    const response = await fetch(`${this.baseUrl}/api/fashion-items${params}`);
+  async getFashionItems(): Promise<FashionItem[]> {
+    const response = await fetch(`${this.baseUrl}/api/fashion-items`, {
+      credentials: 'include' // Include session cookies
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch fashion items');
     }
     return response.json();
   }
 
-  async getFashionItemsByCategory(category: string, userId?: string): Promise<FashionItem[]> {
-    const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-    const response = await fetch(`${this.baseUrl}/api/fashion-items/category/${encodeURIComponent(category)}${params}`);
+  async getFashionItemsByCategory(category: string): Promise<FashionItem[]> {
+    const response = await fetch(`${this.baseUrl}/api/fashion-items/category/${encodeURIComponent(category)}`, {
+      credentials: 'include' // Include session cookies
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch fashion items by category');
     }
     return response.json();
   }
 
-  async getTryOnResults(userId?: string): Promise<TryOnResult[]> {
-    const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-    const response = await fetch(`${this.baseUrl}/api/try-on-results${params}`);
+  async getTryOnResults(): Promise<TryOnResult[]> {
+    const response = await fetch(`${this.baseUrl}/api/try-on-results`, {
+      credentials: 'include' // Include session cookies
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch try-on results');
     }

@@ -5,6 +5,7 @@ import { insertTryOnResultSchema, registerUserSchema, loginUserSchema } from "@s
 import { generateVirtualTryOn, generateSimultaneousTryOn, generateProgressiveTryOn, imageBufferToBase64 } from "./services/gemini";
 import { analyzeImageWithAI } from "./services/imageAnalyzer";
 import { generateVerificationToken, hashVerificationToken, sendVerificationEmail, sendWelcomeEmail } from "./services/emailVerification";
+import { requireAuth, optionalAuth } from "./middleware/auth";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import { z } from "zod";
@@ -128,6 +129,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isValidPassword) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
+
+      // Create session for authenticated user
+      req.session.userId = user.id;
+      req.session.user = user;
 
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
@@ -267,24 +272,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get current user (placeholder for session integration)
-  app.get("/api/auth/me", async (req, res) => {
-    // This will be implemented with session management
-    res.status(401).json({ error: "Not authenticated" });
+  // Get current user
+  app.get("/api/auth/me", requireAuth, async (req, res) => {
+    // User is guaranteed to be present due to requireAuth middleware
+    res.json({ 
+      user: req.user 
+    });
   });
 
   // Logout
   app.post("/api/auth/logout", async (req, res) => {
-    // This will be implemented with session management
-    res.json({ message: "Logout successful" });
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destroy error:", err);
+        return res.status(500).json({ error: "Failed to logout" });
+      }
+      res.clearCookie('fashionmirror.sid'); // Clear session cookie
+      res.json({ message: "Logout successful" });
+    });
   });
   
   // Get all fashion items
-  app.get("/api/fashion-items", async (req, res) => {
+  app.get("/api/fashion-items", optionalAuth, async (req, res) => {
     try {
       const storage = await getStorage();
-      const { userId } = req.query;
-      const items = await storage.getFashionItems(userId as string | undefined);
+      const userId = req.user?.id; // Use authenticated user's ID or undefined for guests
+      const items = await storage.getFashionItems(userId);
       res.json(items);
     } catch (error) {
       console.error("Error fetching fashion items:", error);
@@ -293,12 +306,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get fashion items by category
-  app.get("/api/fashion-items/category/:category", async (req, res) => {
+  app.get("/api/fashion-items/category/:category", optionalAuth, async (req, res) => {
     try {
       const { category } = req.params;
       const storage = await getStorage();
-      const { userId } = req.query;
-      const items = await storage.getFashionItemsByCategory(category, userId as string | undefined);
+      const userId = req.user?.id; // Use authenticated user's ID or undefined for guests
+      const items = await storage.getFashionItemsByCategory(category, userId);
       res.json(items);
     } catch (error) {
       console.error("Error fetching fashion items by category:", error);
@@ -306,18 +319,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get try-on results for a user (for demo purposes, no auth required)
-  app.get("/api/try-on-results", async (req, res) => {
+  // Get try-on results for authenticated user
+  app.get("/api/try-on-results", requireAuth, async (req, res) => {
     try {
-      const { userId } = req.query;
-      if (userId) {
-        const storage = await getStorage();
-        const results = await storage.getTryOnResultsByUserId(userId as string);
-        res.json(results);
-      } else {
-        // For demo, return empty array if no userId provided
-        res.json([]);
-      }
+      const storage = await getStorage();
+      const results = await storage.getTryOnResultsByUserId(req.user!.id);
+      res.json(results);
     } catch (error) {
       console.error("Error fetching try-on results:", error);
       res.status(500).json({ error: "Failed to fetch try-on results" });
@@ -325,10 +332,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate batch virtual try-on
-  app.post("/api/try-on/generate-batch", upload.array('files'), async (req, res) => {
+  app.post("/api/try-on/generate-batch", requireAuth, upload.array('files'), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
-      const { userId } = req.body;
+      const userId = req.user!.id; // Use authenticated user's ID
       
       if (!files || files.length === 0) {
         return res.status(400).json({ error: "No files uploaded" });
@@ -437,10 +444,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate simultaneous virtual try-on (all items at once)
-  app.post("/api/try-on/generate-simultaneous", upload.array('files'), async (req, res) => {
+  app.post("/api/try-on/generate-simultaneous", requireAuth, upload.array('files'), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
-      const { userId } = req.body;
+      const userId = req.user!.id; // Use authenticated user's ID
       
       if (!files || files.length === 0) {
         return res.status(400).json({ error: "No files uploaded" });
@@ -547,13 +554,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate single step of progressive try-on
-  app.post("/api/try-on/generate-step", upload.fields([
+  app.post("/api/try-on/generate-step", requireAuth, upload.fields([
     { name: 'modelImage', maxCount: 1 },
     { name: 'fashionImage', maxCount: 1 }
   ]), async (req, res) => {
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-      const { fashionItemName, fashionCategory, userId, stepNumber } = req.body;
+      const { fashionItemName, fashionCategory, stepNumber } = req.body;
+      const userId = req.user!.id; // Use authenticated user's ID
 
       if (!files.modelImage || !files.fashionImage) {
         return res.status(400).json({ error: "Both model and fashion images are required" });
@@ -601,10 +609,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Progressive try-on endpoint (applies fashion items one by one)
-  app.post("/api/try-on/generate-progressive", upload.array('files'), async (req, res) => {
+  app.post("/api/try-on/generate-progressive", requireAuth, upload.array('files'), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
-      const { userId } = req.body;
+      const userId = req.user!.id; // Use authenticated user's ID
       
       if (!files || files.length === 0) {
         return res.status(400).json({ error: "No files uploaded" });
@@ -713,13 +721,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate virtual try-on (single item - keep for backward compatibility)
-  app.post("/api/try-on/generate", upload.fields([
+  app.post("/api/try-on/generate", requireAuth, upload.fields([
     { name: 'modelImage', maxCount: 1 },
     { name: 'fashionImage', maxCount: 1 }
   ]), async (req, res) => {
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-      const { fashionItemName, fashionCategory, userId } = req.body;
+      const { fashionItemName, fashionCategory } = req.body;
+      const userId = req.user!.id; // Use authenticated user's ID
 
       if (!files.modelImage || !files.fashionImage) {
         return res.status(400).json({ error: "Both model and fashion images are required" });
@@ -816,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save analyzed fashion item to collection
-  app.post("/api/fashion-items", upload.single('image'), async (req, res) => {
+  app.post("/api/fashion-items", requireAuth, upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No image file provided" });
@@ -833,13 +842,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const imageUrl = `data:image/jpeg;base64,${imageBase64}`;
 
       const storage = await getStorage();
-      const { userId } = req.body;
       const newItem = await storage.createFashionItem({
         name,
         category,
         imageUrl,
         description: description || `User uploaded: ${name}`,
-        userId: userId || null, // Set to user's ID if provided
+        userId: req.user!.id, // Use authenticated user's ID
         isShared: "false" // User uploaded items are private to the user
       });
 
