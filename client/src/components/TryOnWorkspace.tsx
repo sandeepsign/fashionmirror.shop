@@ -44,6 +44,7 @@ export default function TryOnWorkspace({
   const [currentGeneratingIndex, setCurrentGeneratingIndex] = useState<number>(-1);
   const [currentViewingStep, setCurrentViewingStep] = useState(0); // Track which step image is being viewed
   const [showStatusView, setShowStatusView] = useState(false); // Track whether to show status view
+  const [textPrompt, setTextPrompt] = useState(''); // User's creative text prompt
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -553,6 +554,38 @@ export default function TryOnWorkspace({
                     />
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Text Prompt Input */}
+        <div className="mt-8 max-w-2xl mx-auto">
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-foreground mb-2">Creative Instructions</h3>
+              <p className="text-sm text-muted-foreground">
+                Add custom instructions to control pose, background, setting, or any creative adjustments
+              </p>
+            </div>
+            <div className="relative">
+              <textarea
+                value={textPrompt}
+                onChange={(e) => setTextPrompt(e.target.value)}
+                placeholder="e.g. Change the pose to casual sitting, add a studio background, make it more elegant..."
+                className="w-full p-4 border border-border rounded-xl bg-background text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                rows={3}
+                maxLength={500}
+                data-testid="textarea-text-prompt"
+              />
+              <div className="absolute bottom-3 right-3 text-xs text-muted-foreground">
+                {textPrompt.length}/500
+              </div>
+            </div>
+            {textPrompt && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <i className="fas fa-lightbulb mr-2"></i>
+                Your creative instructions will be applied to the AI generation
               </div>
             )}
           </div>
