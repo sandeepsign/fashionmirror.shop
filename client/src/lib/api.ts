@@ -256,6 +256,10 @@ export class APIClient {
       }
     });
     
+    // Add text prompt if provided
+    if (request.textPrompt) {
+      formData.append('textPrompt', request.textPrompt);
+    }
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate-simultaneous`, {
       method: 'POST',

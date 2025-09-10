@@ -120,6 +120,7 @@ export default function TryOnWorkspace({
             fashionItemName: item.name,
             fashionCategory: item.category,
             stepNumber: i + 1,
+            textPrompt: textPrompt.trim() || undefined
           });
           
           if (!stepResponse.success) {

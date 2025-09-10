@@ -24,6 +24,24 @@ const upload = multer({
   }
 });
 
+// Utility function to validate and sanitize text prompts
+function validateTextPrompt(textPrompt: any): string | undefined {
+  if (!textPrompt || typeof textPrompt !== 'string') {
+    return undefined;
+  }
+  
+  const sanitized = textPrompt.trim();
+  if (sanitized.length === 0) {
+    return undefined;
+  }
+  
+  if (sanitized.length > 500) {
+    throw new Error('Text prompt must be 500 characters or less');
+  }
+  
+  return sanitized;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Authentication routes
@@ -385,8 +403,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "At least one fashion item is required" });
       }
       
-      // Extract text prompt if provided
-      const textPrompt = req.body.textPrompt;
+      // Extract and validate text prompt if provided
+      let textPrompt: string | undefined;
+      try {
+        textPrompt = validateTextPrompt(req.body.textPrompt);
+      } catch (validationError) {
+        return res.status(400).json({ 
+          error: validationError instanceof Error ? validationError.message : "Invalid text prompt" 
+        });
+      }
       
       const modelImageBase64 = imageBufferToBase64(modelImage.buffer);
       const results = [];
@@ -502,8 +527,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "At least one fashion item is required" });
       }
 
-      // Extract text prompt if provided
-      const textPrompt = req.body.textPrompt;
+      // Extract and validate text prompt if provided
+      let textPrompt: string | undefined;
+      try {
+        textPrompt = validateTextPrompt(req.body.textPrompt);
+      } catch (validationError) {
+        return res.status(400).json({ 
+          error: validationError instanceof Error ? validationError.message : "Invalid text prompt" 
+        });
+      }
 
       const modelImageBase64 = imageBufferToBase64(modelImage.buffer);
       const fashionImagesBase64 = fashionItems.map(item => imageBufferToBase64(item.image.buffer));
@@ -577,7 +609,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ]), async (req, res) => {
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-      const { fashionItemName, fashionCategory, stepNumber, textPrompt } = req.body;
+      const { fashionItemName, fashionCategory, stepNumber } = req.body;
+      let textPrompt: string | undefined;
+      try {
+        textPrompt = validateTextPrompt(req.body.textPrompt);
+      } catch (validationError) {
+        return res.status(400).json({ 
+          error: validationError instanceof Error ? validationError.message : "Invalid text prompt" 
+        });
+      }
       const userId = req.user!.id; // Use authenticated user's ID
 
       if (!files.modelImage || !files.fashionImage) {
@@ -673,8 +713,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "At least one fashion item is required" });
       }
 
-      // Extract text prompt if provided
-      const textPrompt = req.body.textPrompt;
+      // Extract and validate text prompt if provided
+      let textPrompt: string | undefined;
+      try {
+        textPrompt = validateTextPrompt(req.body.textPrompt);
+      } catch (validationError) {
+        return res.status(400).json({ 
+          error: validationError instanceof Error ? validationError.message : "Invalid text prompt" 
+        });
+      }
 
       const modelImageBase64 = imageBufferToBase64(modelImage.buffer);
       const fashionImagesBase64 = fashionItems.map(item => imageBufferToBase64(item.image.buffer));
@@ -750,7 +797,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ]), async (req, res) => {
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-      const { fashionItemName, fashionCategory, textPrompt } = req.body;
+      const { fashionItemName, fashionCategory } = req.body;
+      let textPrompt: string | undefined;
+      try {
+        textPrompt = validateTextPrompt(req.body.textPrompt);
+      } catch (validationError) {
+        return res.status(400).json({ 
+          error: validationError instanceof Error ? validationError.message : "Invalid text prompt" 
+        });
+      }
       const userId = req.user!.id; // Use authenticated user's ID
 
       if (!files.modelImage || !files.fashionImage) {
