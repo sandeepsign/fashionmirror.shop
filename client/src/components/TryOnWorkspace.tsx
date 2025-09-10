@@ -4,6 +4,7 @@ import { apiClient, FashionItemInput } from "@/lib/api";
 import { FashionItem, TryOnResult } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface TryOnWorkspaceProps {
   modelImage: File | null;
@@ -44,6 +45,7 @@ export default function TryOnWorkspace({
   const [currentViewingStep, setCurrentViewingStep] = useState(0); // Track which step image is being viewed
   const [showStatusView, setShowStatusView] = useState(false); // Track whether to show status view
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Create preview URL for model image
   useEffect(() => {
@@ -117,7 +119,6 @@ export default function TryOnWorkspace({
             fashionItemName: item.name,
             fashionCategory: item.category,
             stepNumber: i + 1,
-            userId: 'demo-user'
           });
           
           if (!stepResponse.success) {
@@ -146,11 +147,21 @@ export default function TryOnWorkspace({
           console.log(`Completed step ${i + 1}: ${item.name}`);
         }
         
-        // Create final result object
+        // Save final result to database using the progressive API
+        const finalImageBlob = await fetch(stepResults[stepResults.length - 1]).then(r => r.blob());
+        const finalImageFile = new File([finalImageBlob], 'final-result.jpg', { type: 'image/jpeg' });
+        
+        // Use the progressive API to properly save the result
+        const savedResult = await apiClient.generateProgressiveTryOn({
+          modelImage: modelImage!,
+          fashionItems: fashionItems
+        });
+
+        // Create result object from saved result
         const finalResult = {
-          id: `progressive-${Date.now()}`,
+          id: savedResult.result?.id || `progressive-${Date.now()}`,
           createdAt: new Date(),
-          userId: 'demo-user',
+          userId: user?.id || null,
           modelImageUrl: URL.createObjectURL(modelImage!),
           fashionImageUrl: stepResults[stepResults.length - 1],
           resultImageUrl: stepResults[stepResults.length - 1],
