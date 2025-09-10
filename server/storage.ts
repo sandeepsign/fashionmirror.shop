@@ -1,6 +1,9 @@
-import { type User, type InsertUser, type TryOnResult, type InsertTryOnResult, type FashionItem, type InsertFashionItem } from "@shared/schema";
+import { type User, type InsertUser, type TryOnResult, type InsertTryOnResult, type FashionItem, type InsertFashionItem, users, tryOnResults, fashionItems } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -241,4 +244,142 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation using Drizzle ORM
+export class DatabaseStorage implements IStorage {
+  private db;
+
+  constructor() {
+    const sql = neon(process.env.DATABASE_URL!);
+    this.db = drizzle(sql);
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0];
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await this.db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  async getUserByVerificationToken(hashedToken: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.verificationToken, hashedToken)).limit(1);
+    return result[0];
+  }
+
+  async updateUserVerification(id: string, isVerified: string, clearToken?: boolean): Promise<User> {
+    const updateData: any = { isVerified };
+    if (clearToken) {
+      updateData.verificationToken = null;
+      updateData.verificationTokenExpires = null;
+    }
+    const result = await this.db.update(users).set(updateData).where(eq(users.id, id)).returning();
+    return result[0];
+  }
+
+  async getTryOnResult(id: string): Promise<TryOnResult | undefined> {
+    const result = await this.db.select().from(tryOnResults).where(eq(tryOnResults.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getTryOnResultsByUserId(userId: string): Promise<TryOnResult[]> {
+    return await this.db.select().from(tryOnResults).where(eq(tryOnResults.userId, userId));
+  }
+
+  async createTryOnResult(result: InsertTryOnResult): Promise<TryOnResult> {
+    const insertResult = await this.db.insert(tryOnResults).values(result).returning();
+    return insertResult[0];
+  }
+
+  async getFashionItem(id: string): Promise<FashionItem | undefined> {
+    const result = await this.db.select().from(fashionItems).where(eq(fashionItems.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getFashionItems(): Promise<FashionItem[]> {
+    return await this.db.select().from(fashionItems);
+  }
+
+  async getFashionItemsByCategory(category: string): Promise<FashionItem[]> {
+    return await this.db.select().from(fashionItems).where(eq(fashionItems.category, category));
+  }
+
+  async createFashionItem(item: InsertFashionItem): Promise<FashionItem> {
+    const result = await this.db.insert(fashionItems).values(item).returning();
+    return result[0];
+  }
+}
+
+// Create a function to initialize database with default data
+async function initializeDatabaseWithDefaults() {
+  const dbStorage = new DatabaseStorage();
+  
+  try {
+    // Check if fashion items exist
+    const existingItems = await dbStorage.getFashionItems();
+    if (existingItems.length === 0) {
+      // Initialize with default fashion items
+      const defaultItems: InsertFashionItem[] = [
+        {
+          name: "Athletic Wear Set",
+          category: "Fitness",
+          imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
+          description: "Comfortable athletic wear for fitness activities"
+        },
+        {
+          name: "Red Evening Gown",
+          category: "Formal",
+          imageUrl: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
+          description: "Elegant red evening gown for special occasions"
+        },
+        {
+          name: "White Summer Blouse",
+          category: "Casual",
+          imageUrl: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
+          description: "Light white blouse perfect for summer casual wear"
+        }
+      ];
+      
+      for (const item of defaultItems) {
+        await dbStorage.createFashionItem(item);
+      }
+      console.log("Default fashion items initialized in database");
+    }
+    
+    // Check if admin user exists
+    const adminUser = await dbStorage.getUserByUsername("admin");
+    if (!adminUser) {
+      // Create default admin user
+      const hashedPassword = await bcrypt.hash("W3lcome1!", 12);
+      await dbStorage.createUser({
+        username: "admin",
+        email: "admin@fashionmirror.com",
+        password: hashedPassword,
+        role: "admin",
+        isVerified: "true"
+      });
+      console.log("Default admin user created: admin / W3lcome1!");
+    }
+  } catch (error) {
+    console.error("Error initializing database:", error);
+    // Fallback to MemStorage if database initialization fails
+    console.log("Falling back to MemStorage due to database error");
+    return new MemStorage();
+  }
+  
+  return dbStorage;
+}
+
+// Export storage instance - use database storage
+export const storage = await initializeDatabaseWithDefaults();

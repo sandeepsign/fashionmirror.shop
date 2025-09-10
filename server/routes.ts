@@ -146,8 +146,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { token } = req.params;
       
-      if (!token) {
-        return res.status(400).json({ error: "Verification token is required" });
+      // Validate token format
+      if (!token || typeof token !== 'string' || token.length < 10) {
+        return res.status(400).json({ error: "Invalid verification token format" });
       }
 
       // Hash the token for database lookup
@@ -162,6 +163,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Check token expiration
+      if (user.verificationTokenExpires && new Date() > user.verificationTokenExpires) {
+        return res.status(400).json({ 
+          error: "Verification token has expired. Please register again or request a new verification email." 
+        });
+      }
+
       // Check if already verified
       if (user.isVerified === "true") {
         return res.status(200).json({ 
@@ -173,12 +181,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update user verification status
       const verifiedUser = await storage.updateUserVerification(user.id, "true", true);
 
-      // Send welcome email
+      // Send welcome email (non-blocking)
       try {
         await sendWelcomeEmail(user.email, user.username);
       } catch (emailError) {
         console.error("Failed to send welcome email:", emailError);
-        // Continue even if welcome email fails
+        // Continue even if welcome email fails - verification is still successful
       }
 
       res.status(200).json({
@@ -188,7 +196,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error("Error during email verification:", error);
-      res.status(500).json({ error: "Failed to verify email" });
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('database') || error.message.includes('connection')) {
+          return res.status(503).json({ error: "Service temporarily unavailable. Please try again later." });
+        }
+      }
+      
+      res.status(500).json({ error: "Failed to verify email. Please try again or contact support." });
     }
   });
 
@@ -196,6 +212,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/verify-email/:token", async (req, res) => {
     try {
       const { token } = req.params;
+      
+      // Validate token format
+      if (!token || typeof token !== 'string' || token.length < 10) {
+        return res.redirect(`/?verification=invalid`);
+      }
       
       // Hash the token for database lookup
       const hashedToken = hashVerificationToken(token);
@@ -206,6 +227,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect(`/?verification=invalid`);
       }
 
+      // Check token expiration
+      if (user.verificationTokenExpires && new Date() > user.verificationTokenExpires) {
+        return res.redirect(`/?verification=expired`);
+      }
+
       if (user.isVerified === "true") {
         // Already verified, redirect to login
         return res.redirect(`/?verification=already-verified`);
@@ -214,11 +240,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update verification status
       await storage.updateUserVerification(user.id, "true", true);
 
-      // Send welcome email  
+      // Send welcome email (non-blocking)
       try {
         await sendWelcomeEmail(user.email, user.username);
       } catch (emailError) {
         console.error("Failed to send welcome email:", emailError);
+        // Don't fail verification if welcome email fails
       }
 
       // Redirect to frontend with success state
@@ -226,6 +253,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error("Error in verification page:", error);
+      
+      // Provide more specific error handling
+      if (error instanceof Error && error.message.includes('database')) {
+        return res.redirect(`/?verification=service-error`);
+      }
+      
       res.redirect(`/?verification=error`);
     }
   });

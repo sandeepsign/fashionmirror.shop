@@ -46,7 +46,15 @@ export default function Home() {
           type = 'info';
           break;
         case 'invalid':
-          message = '❌ Invalid or expired verification link. Please register again or contact support.';
+          message = '❌ Invalid verification link. Please check your email for the correct link or register again.';
+          type = 'error';
+          break;
+        case 'expired':
+          message = '❌ Verification link has expired. Please register again to receive a new verification email.';
+          type = 'error';
+          break;
+        case 'service-error':
+          message = '❌ Service temporarily unavailable. Please try again later or contact support if the issue persists.';
           type = 'error';
           break;
         case 'error':

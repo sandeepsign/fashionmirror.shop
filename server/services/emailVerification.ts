@@ -43,9 +43,12 @@ export async function sendVerificationEmail(
   username: string, 
   verificationToken: string
 ): Promise<void> {
-  const baseUrl = process.env.NODE_ENV === 'production' 
-    ? process.env.PRODUCTION_URL || 'https://your-app.replit.app'
-    : 'http://localhost:5000';
+  // Construct the proper base URL for both development and production environments
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : process.env.NODE_ENV === 'production' 
+      ? (process.env.PRODUCTION_URL || 'http://localhost:5000')
+      : 'http://localhost:5000';
     
   const verificationUrl = `${baseUrl}/verify-email/${verificationToken}`;
   
