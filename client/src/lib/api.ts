@@ -13,11 +13,13 @@ export interface GenerateTryOnRequest {
   fashionImage: File;
   fashionItemName: string;
   fashionCategory: string;
+  textPrompt?: string;
 }
 
 export interface GenerateBatchTryOnRequest {
   modelImage: File;
   fashionItems: FashionItemInput[];
+  textPrompt?: string;
 }
 
 export interface BatchTryOnResult {
@@ -38,6 +40,7 @@ export interface GenerateTryOnResponse {
 export interface GenerateSimultaneousTryOnRequest {
   modelImage: File;
   fashionItems: FashionItemInput[];
+  textPrompt?: string;
 }
 
 export interface SimultaneousTryOnResult {
@@ -53,6 +56,7 @@ export interface ProgressiveStepRequest {
   fashionItemName: string;
   fashionCategory: string;
   stepNumber: number;
+  textPrompt?: string;
 }
 
 export interface ProgressiveStepResult {
@@ -60,6 +64,19 @@ export interface ProgressiveStepResult {
   stepNumber: number;
   resultImageBase64: string;
   error?: string;
+}
+
+export interface GenerateProgressiveTryOnRequest {
+  modelImage: File;
+  fashionItems: FashionItemInput[];
+  textPrompt?: string;
+}
+
+export interface ProgressiveTryOnResult {
+  success: boolean;
+  result?: TryOnResult;
+  error?: string;
+  stepResults?: string[];
 }
 
 export class APIClient {
@@ -105,6 +122,9 @@ export class APIClient {
     formData.append('fashionImage', request.fashionImage);
     formData.append('fashionItemName', request.fashionItemName);
     formData.append('fashionCategory', request.fashionCategory);
+    if (request.textPrompt) {
+      formData.append('textPrompt', request.textPrompt);
+    }
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate`, {
       method: 'POST',
@@ -137,6 +157,10 @@ export class APIClient {
       }
     });
     
+    // Add text prompt if provided
+    if (request.textPrompt) {
+      formData.append('textPrompt', request.textPrompt);
+    }
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate-batch`, {
       method: 'POST',
@@ -152,7 +176,7 @@ export class APIClient {
     return response.json();
   }
 
-  async generateProgressiveTryOn(request: GenerateSimultaneousTryOnRequest): Promise<SimultaneousTryOnResult> {
+  async generateProgressiveTryOn(request: GenerateProgressiveTryOnRequest): Promise<ProgressiveTryOnResult> {
     const formData = new FormData();
     
     // Append model image first
@@ -169,6 +193,10 @@ export class APIClient {
       }
     });
     
+    // Add text prompt if provided
+    if (request.textPrompt) {
+      formData.append('textPrompt', request.textPrompt);
+    }
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate-progressive`, {
       method: 'POST',
@@ -192,6 +220,9 @@ export class APIClient {
     formData.append('fashionItemName', request.fashionItemName);
     formData.append('fashionCategory', request.fashionCategory);
     formData.append('stepNumber', request.stepNumber.toString());
+    if (request.textPrompt) {
+      formData.append('textPrompt', request.textPrompt);
+    }
     
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate-step`, {
