@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -223,13 +223,35 @@ export class MemStorage implements IStorage {
     return this.fashionItems.get(id);
   }
 
-  async getFashionItems(): Promise<FashionItem[]> {
-    return Array.from(this.fashionItems.values());
+  async getFashionItems(userId?: string): Promise<FashionItem[]> {
+    const allItems = Array.from(this.fashionItems.values());
+    
+    if (!userId) {
+      // Return only shared items for non-authenticated users
+      return allItems.filter(item => item.isShared === "true");
+    }
+    
+    // Return shared items + user's personal items
+    return allItems.filter(item => 
+      item.isShared === "true" || item.userId === userId
+    );
   }
 
-  async getFashionItemsByCategory(category: string): Promise<FashionItem[]> {
-    return Array.from(this.fashionItems.values()).filter(
-      (item) => item.category.toLowerCase() === category.toLowerCase(),
+  async getFashionItemsByCategory(category: string, userId?: string): Promise<FashionItem[]> {
+    const allItems = Array.from(this.fashionItems.values());
+    
+    if (!userId) {
+      // Return only shared items for non-authenticated users
+      return allItems.filter(item => 
+        item.category.toLowerCase() === category.toLowerCase() && 
+        item.isShared === "true"
+      );
+    }
+    
+    // Return shared items + user's personal items in this category
+    return allItems.filter(item => 
+      item.category.toLowerCase() === category.toLowerCase() && 
+      (item.isShared === "true" || item.userId === userId)
     );
   }
 
@@ -311,12 +333,42 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getFashionItems(): Promise<FashionItem[]> {
-    return await this.db.select().from(fashionItems);
+  async getFashionItems(userId?: string): Promise<FashionItem[]> {
+    if (!userId) {
+      // Return only shared items for non-authenticated users
+      return await this.db.select().from(fashionItems).where(eq(fashionItems.isShared, "true"));
+    }
+    
+    // Return shared items + user's personal items
+    return await this.db.select().from(fashionItems).where(
+      or(
+        eq(fashionItems.isShared, "true"),
+        eq(fashionItems.userId, userId)
+      )
+    );
   }
 
-  async getFashionItemsByCategory(category: string): Promise<FashionItem[]> {
-    return await this.db.select().from(fashionItems).where(eq(fashionItems.category, category));
+  async getFashionItemsByCategory(category: string, userId?: string): Promise<FashionItem[]> {
+    if (!userId) {
+      // Return only shared items for non-authenticated users
+      return await this.db.select().from(fashionItems).where(
+        and(
+          eq(fashionItems.category, category),
+          eq(fashionItems.isShared, "true")
+        )
+      );
+    }
+    
+    // Return shared items + user's personal items in this category
+    return await this.db.select().from(fashionItems).where(
+      and(
+        eq(fashionItems.category, category),
+        or(
+          eq(fashionItems.isShared, "true"),
+          eq(fashionItems.userId, userId)
+        )
+      )
+    );
   }
 
   async createFashionItem(item: InsertFashionItem): Promise<FashionItem> {
@@ -333,25 +385,71 @@ async function initializeDatabaseWithDefaults() {
     // Check if fashion items exist
     const existingItems = await dbStorage.getFashionItems();
     if (existingItems.length === 0) {
-      // Initialize with default fashion items
+      // Initialize with default shared fashion items
       const defaultItems: InsertFashionItem[] = [
         {
           name: "Athletic Wear Set",
           category: "Fitness",
           imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
-          description: "Comfortable athletic wear for fitness activities"
+          description: "Comfortable athletic wear for fitness activities",
+          userId: null,
+          isShared: "true"
         },
         {
           name: "Red Evening Gown",
           category: "Formal",
           imageUrl: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
-          description: "Elegant red evening gown for special occasions"
+          description: "Elegant red evening gown for special occasions",
+          userId: null,
+          isShared: "true"
         },
         {
           name: "White Summer Blouse",
           category: "Casual",
           imageUrl: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
-          description: "Light white blouse perfect for summer casual wear"
+          description: "Light white blouse perfect for summer casual wear",
+          userId: null,
+          isShared: "true"
+        },
+        {
+          name: "Leather Handbag",
+          category: "Accessories",
+          imageUrl: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
+          description: "Premium leather handbag",
+          userId: null,
+          isShared: "true"
+        },
+        {
+          name: "Designer Sunglasses",
+          category: "Accessories",
+          imageUrl: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
+          description: "Stylish designer sunglasses",
+          userId: null,
+          isShared: "true"
+        },
+        {
+          name: "Denim Jacket",
+          category: "Casual",
+          imageUrl: "https://pixabay.com/get/gf323024bd14f7265133baf65249e87ac2e4d018a3332c7af141135e529eddac3ff55a489c5a1bc4a3c5f0c3428686bfd89d51319a9cc77cba1d6c157ae0c22cb_1280.jpg",
+          description: "Classic denim jacket for casual outfits",
+          userId: null,
+          isShared: "true"
+        },
+        {
+          name: "Gold Jewelry Set",
+          category: "Accessories",
+          imageUrl: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
+          description: "Elegant gold jewelry set",
+          userId: null,
+          isShared: "true"
+        },
+        {
+          name: "Classic Sneakers",
+          category: "Footwear",
+          imageUrl: "https://images.unsplash.com/photo-1549298916-b41d501d3772?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
+          description: "Comfortable white sneakers",
+          userId: null,
+          isShared: "true"
         }
       ];
       
