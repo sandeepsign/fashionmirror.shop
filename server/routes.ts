@@ -283,7 +283,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/fashion-items", async (req, res) => {
     try {
       const storage = await getStorage();
-      const items = await storage.getFashionItems();
+      const { userId } = req.query;
+      const items = await storage.getFashionItems(userId as string | undefined);
       res.json(items);
     } catch (error) {
       console.error("Error fetching fashion items:", error);
@@ -296,7 +297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { category } = req.params;
       const storage = await getStorage();
-      const items = await storage.getFashionItemsByCategory(category);
+      const { userId } = req.query;
+      const items = await storage.getFashionItemsByCategory(category, userId as string | undefined);
       res.json(items);
     } catch (error) {
       console.error("Error fetching fashion items by category:", error);
@@ -831,11 +833,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const imageUrl = `data:image/jpeg;base64,${imageBase64}`;
 
       const storage = await getStorage();
+      const { userId } = req.body;
       const newItem = await storage.createFashionItem({
         name,
         category,
         imageUrl,
-        description: description || `User uploaded: ${name}`
+        description: description || `User uploaded: ${name}`,
+        userId: userId || null, // Set to user's ID if provided
+        isShared: "false" // User uploaded items are private to the user
       });
 
       res.status(201).json(newItem);

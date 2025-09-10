@@ -18,8 +18,8 @@ export interface IStorage {
   createTryOnResult(result: InsertTryOnResult): Promise<TryOnResult>;
   
   getFashionItem(id: string): Promise<FashionItem | undefined>;
-  getFashionItems(): Promise<FashionItem[]>;
-  getFashionItemsByCategory(category: string): Promise<FashionItem[]>;
+  getFashionItems(userId?: string): Promise<FashionItem[]>;
+  getFashionItemsByCategory(category: string, userId?: string): Promise<FashionItem[]>;
   createFashionItem(item: InsertFashionItem): Promise<FashionItem>;
 }
 
