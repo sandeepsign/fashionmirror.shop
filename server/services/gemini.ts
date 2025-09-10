@@ -138,6 +138,7 @@ export interface VirtualTryOnRequest {
   fashionImageBase64: string;
   fashionItemName: string;
   fashionCategory: string;
+  textPrompt?: string;
 }
 
 export interface VirtualTryOnResponse {
@@ -149,6 +150,7 @@ export interface VirtualTryOnResponse {
 export interface SimultaneousTryOnRequest {
   modelImageBase64: string;
   fashionImagesBase64: string[];
+  textPrompt?: string;
 }
 
 export interface SimultaneousTryOnResponse {
@@ -160,6 +162,7 @@ export interface SimultaneousTryOnResponse {
 export interface ProgressiveTryOnRequest {
   modelImageBase64: string;
   fashionImagesBase64: string[];
+  textPrompt?: string;
 }
 
 export interface ProgressiveTryOnResponse {
@@ -173,7 +176,8 @@ export async function generateVirtualTryOn({
   modelImageBase64,
   fashionImageBase64,
   fashionItemName,
-  fashionCategory
+  fashionCategory,
+  textPrompt
 }: VirtualTryOnRequest): Promise<VirtualTryOnResponse> {
   try {
     // First test if the API key works with a simple text model
@@ -212,7 +216,10 @@ TASK: Take the clothing item from the second image and place it on the SAME PERS
 SPECIFIC APPLICATION INSTRUCTIONS:
 ${itemInstructions}
 
-PROFESSIONAL REQUIREMENTS:
+${textPrompt ? `USER CREATIVE INSTRUCTIONS:
+${textPrompt}
+
+` : ''}PROFESSIONAL REQUIREMENTS:
 - Make the new item fit naturally with proper shadows and lighting
 - Create realistic fabric draping and movement
 - Professional studio lighting and background
@@ -291,7 +298,8 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
 
 export async function generateSimultaneousTryOn({
   modelImageBase64,
-  fashionImagesBase64
+  fashionImagesBase64,
+  textPrompt
 }: SimultaneousTryOnRequest): Promise<SimultaneousTryOnResponse> {
   try {
     // Test API key first
@@ -330,7 +338,10 @@ TASK: Take the clothing items from the additional images and place them on the S
 SPECIFIC APPLICATION INSTRUCTIONS:
 ${itemInstructions}
 
-PROFESSIONAL QUALITY STANDARDS:
+${textPrompt ? `USER CREATIVE INSTRUCTIONS:
+${textPrompt}
+
+` : ''}PROFESSIONAL QUALITY STANDARDS:
 - Create realistic fabric draping with proper weight and movement
 - Ensure natural fabric textures and material properties
 - Add appropriate shadows and highlights for dimensional depth
@@ -445,7 +456,8 @@ export function base64ToImageBuffer(base64: string): Buffer {
 
 export async function generateProgressiveTryOn({
   modelImageBase64,
-  fashionImagesBase64
+  fashionImagesBase64,
+  textPrompt
 }: ProgressiveTryOnRequest): Promise<ProgressiveTryOnResponse> {
   try {
     console.log("Starting progressive try-on generation with", fashionImagesBase64.length, "items");
@@ -501,7 +513,10 @@ ${isFirstStep
 SPECIFIC APPLICATION INSTRUCTIONS:
 ${stepInstructions}
 
-PROFESSIONAL REQUIREMENTS:
+${textPrompt ? `USER CREATIVE INSTRUCTIONS:
+${textPrompt}
+
+` : ''}PROFESSIONAL REQUIREMENTS:
 - Make the new item fit naturally with proper shadows and lighting
 - Create realistic fabric draping and movement
 - Professional studio lighting and background

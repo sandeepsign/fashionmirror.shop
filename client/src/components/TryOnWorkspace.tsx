@@ -155,7 +155,8 @@ export default function TryOnWorkspace({
         // Use the progressive API to properly save the result
         const savedResult = await apiClient.generateProgressiveTryOn({
           modelImage: modelImage!,
-          fashionItems: fashionItems
+          fashionItems: fashionItems,
+          textPrompt: textPrompt.trim() || undefined
         });
 
         // Create result object from saved result

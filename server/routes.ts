@@ -385,6 +385,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "At least one fashion item is required" });
       }
       
+      // Extract text prompt if provided
+      const textPrompt = req.body.textPrompt;
+      
       const modelImageBase64 = imageBufferToBase64(modelImage.buffer);
       const results = [];
       
@@ -400,7 +403,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             modelImageBase64,
             fashionImageBase64,
             fashionItemName: item.name,
-            fashionCategory: item.category
+            fashionCategory: item.category,
+            textPrompt
           });
           
           if (result.success) {
@@ -423,7 +427,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 batchIndex: i,
                 totalItems: fashionItems.length,
                 modelImageSize: modelImage.size,
-                fashionImageSize: item.image.size
+                fashionImageSize: item.image.size,
+                textPrompt: textPrompt || undefined
               }
             });
             
@@ -497,13 +502,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "At least one fashion item is required" });
       }
 
+      // Extract text prompt if provided
+      const textPrompt = req.body.textPrompt;
+
       const modelImageBase64 = imageBufferToBase64(modelImage.buffer);
       const fashionImagesBase64 = fashionItems.map(item => imageBufferToBase64(item.image.buffer));
 
       // Generate virtual try-on using Gemini with all items simultaneously
       const result = await generateSimultaneousTryOn({
         modelImageBase64,
-        fashionImagesBase64
+        fashionImagesBase64,
+        textPrompt
       });
 
       if (!result.success) {
@@ -543,7 +552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             source: item.source,
             collectionId: item.collectionId
           })),
-          generationType: 'simultaneous'
+          generationType: 'simultaneous',
+          textPrompt: textPrompt || undefined
         }
       });
 
@@ -567,7 +577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ]), async (req, res) => {
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-      const { fashionItemName, fashionCategory, stepNumber } = req.body;
+      const { fashionItemName, fashionCategory, stepNumber, textPrompt } = req.body;
       const userId = req.user!.id; // Use authenticated user's ID
 
       if (!files.modelImage || !files.fashionImage) {
@@ -592,7 +602,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelImageBase64,
         fashionImageBase64,
         fashionItemName,
-        fashionCategory
+        fashionCategory,
+        textPrompt
       });
 
       if (!result.success) {
@@ -662,13 +673,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "At least one fashion item is required" });
       }
 
+      // Extract text prompt if provided
+      const textPrompt = req.body.textPrompt;
+
       const modelImageBase64 = imageBufferToBase64(modelImage.buffer);
       const fashionImagesBase64 = fashionItems.map(item => imageBufferToBase64(item.image.buffer));
 
       // Generate virtual try-on using progressive layering
       const result = await generateProgressiveTryOn({
         modelImageBase64,
-        fashionImagesBase64
+        fashionImagesBase64,
+        textPrompt
       });
 
       if (!result.success) {
@@ -709,7 +724,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             collectionId: item.collectionId
           })),
           generationType: 'progressive',
-          stepResults: result.stepResults // Store intermediate results
+          stepResults: result.stepResults, // Store intermediate results
+          textPrompt: textPrompt || undefined
         }
       });
 
@@ -734,7 +750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ]), async (req, res) => {
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-      const { fashionItemName, fashionCategory } = req.body;
+      const { fashionItemName, fashionCategory, textPrompt } = req.body;
       const userId = req.user!.id; // Use authenticated user's ID
 
       if (!files.modelImage || !files.fashionImage) {
@@ -757,7 +773,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelImageBase64,
         fashionImageBase64,
         fashionItemName,
-        fashionCategory
+        fashionCategory,
+        textPrompt
       });
 
       if (!result.success) {
@@ -783,7 +800,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata: {
           timestamp: new Date().toISOString(),
           modelImageSize: modelImage.size,
-          fashionImageSize: fashionImage.size
+          fashionImageSize: fashionImage.size,
+          textPrompt: textPrompt || undefined
         }
       });
 
