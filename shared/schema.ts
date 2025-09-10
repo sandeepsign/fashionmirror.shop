@@ -33,6 +33,8 @@ export const fashionItems = pgTable("fashion_items", {
   category: text("category").notNull(),
   imageUrl: text("image_url").notNull(),
   description: text("description"),
+  userId: varchar("user_id").references(() => users.id), // null for shared/default items, user-specific otherwise
+  isShared: text("is_shared").notNull().default("false"), // true for default items available to all users
   createdAt: timestamp("created_at").default(sql`now()`).notNull(),
 });
 
