@@ -4,15 +4,19 @@ import { apiClient } from "@/lib/api";
 import { TryOnResult } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ResultsGalleryProps {
   latestResults?: TryOnResult[];
 }
 
 export default function ResultsGallery({ latestResults = [] }: ResultsGalleryProps) {
+  const { user } = useAuth();
+
   const { data: results, isLoading, error } = useQuery({
-    queryKey: ["/api/try-on-results", "demo-user"],
-    queryFn: () => apiClient.getTryOnResults("demo-user"),
+    queryKey: ["/api/try-on-results", user?.id],
+    queryFn: () => apiClient.getTryOnResults(user?.id),
+    enabled: !!user?.id, // Only fetch when user is authenticated
   });
 
   // Combine latest results with existing results, avoiding duplicates

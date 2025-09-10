@@ -73,16 +73,18 @@ export class APIClient {
     this.baseUrl = import.meta.env.VITE_API_BASE_URL || '';
   }
 
-  async getFashionItems(): Promise<FashionItem[]> {
-    const response = await fetch(`${this.baseUrl}/api/fashion-items`);
+  async getFashionItems(userId?: string): Promise<FashionItem[]> {
+    const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    const response = await fetch(`${this.baseUrl}/api/fashion-items${params}`);
     if (!response.ok) {
       throw new Error('Failed to fetch fashion items');
     }
     return response.json();
   }
 
-  async getFashionItemsByCategory(category: string): Promise<FashionItem[]> {
-    const response = await fetch(`${this.baseUrl}/api/fashion-items/category/${encodeURIComponent(category)}`);
+  async getFashionItemsByCategory(category: string, userId?: string): Promise<FashionItem[]> {
+    const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    const response = await fetch(`${this.baseUrl}/api/fashion-items/category/${encodeURIComponent(category)}${params}`);
     if (!response.ok) {
       throw new Error('Failed to fetch fashion items by category');
     }

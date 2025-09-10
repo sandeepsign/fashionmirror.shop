@@ -4,6 +4,7 @@ import { apiClient } from "@/lib/api";
 import { FashionItem } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface FashionCollectionProps {
   onItemSelect: (item: FashionItem) => void;
@@ -21,10 +22,11 @@ const categories = [
 
 export default function FashionCollection({ onItemSelect, selectedItems }: FashionCollectionProps) {
   const [activeCategory, setActiveCategory] = useState("all");
+  const { user } = useAuth();
 
   const { data: fashionItems, isLoading, error } = useQuery({
-    queryKey: ["/api/fashion-items"],
-    queryFn: () => apiClient.getFashionItems(),
+    queryKey: ["/api/fashion-items", user?.id],
+    queryFn: () => apiClient.getFashionItems(user?.id),
   });
 
   const filteredItems = fashionItems?.filter(item => 
