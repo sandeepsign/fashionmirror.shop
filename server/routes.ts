@@ -130,16 +130,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
-      // Create session for authenticated user
-      req.session.userId = user.id;
-      req.session.user = user;
+      // Regenerate session to prevent session fixation attacks
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ error: "Failed to create secure session" });
+        }
 
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
+        // Create session for authenticated user - only store userId for security
+        req.session.userId = user.id;
 
-      res.json({ 
-        message: "Login successful", 
-        user: userWithoutPassword 
+        // Remove password from response
+        const { password: _, ...userWithoutPassword } = user;
+
+        res.json({ 
+          message: "Login successful", 
+          user: userWithoutPassword 
+        });
       });
 
     } catch (error) {

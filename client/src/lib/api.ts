@@ -13,13 +13,11 @@ export interface GenerateTryOnRequest {
   fashionImage: File;
   fashionItemName: string;
   fashionCategory: string;
-  userId?: string;
 }
 
 export interface GenerateBatchTryOnRequest {
   modelImage: File;
   fashionItems: FashionItemInput[];
-  userId?: string;
 }
 
 export interface BatchTryOnResult {
@@ -40,7 +38,6 @@ export interface GenerateTryOnResponse {
 export interface GenerateSimultaneousTryOnRequest {
   modelImage: File;
   fashionItems: FashionItemInput[];
-  userId?: string;
 }
 
 export interface SimultaneousTryOnResult {
@@ -56,7 +53,6 @@ export interface ProgressiveStepRequest {
   fashionItemName: string;
   fashionCategory: string;
   stepNumber: number;
-  userId?: string;
 }
 
 export interface ProgressiveStepResult {
@@ -109,13 +105,11 @@ export class APIClient {
     formData.append('fashionImage', request.fashionImage);
     formData.append('fashionItemName', request.fashionItemName);
     formData.append('fashionCategory', request.fashionCategory);
-    if (request.userId) {
-      formData.append('userId', request.userId);
-    }
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate`, {
       method: 'POST',
       body: formData,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -143,13 +137,11 @@ export class APIClient {
       }
     });
     
-    if (request.userId) {
-      formData.append('userId', request.userId);
-    }
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate-batch`, {
       method: 'POST',
       body: formData,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -177,13 +169,11 @@ export class APIClient {
       }
     });
     
-    if (request.userId) {
-      formData.append('userId', request.userId);
-    }
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate-progressive`, {
       method: 'POST',
       body: formData,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -203,13 +193,11 @@ export class APIClient {
     formData.append('fashionCategory', request.fashionCategory);
     formData.append('stepNumber', request.stepNumber.toString());
     
-    if (request.userId) {
-      formData.append('userId', request.userId);
-    }
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate-step`, {
       method: 'POST',
       body: formData,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -237,13 +225,11 @@ export class APIClient {
       }
     });
     
-    if (request.userId) {
-      formData.append('userId', request.userId);
-    }
 
     const response = await fetch(`${this.baseUrl}/api/try-on/generate-simultaneous`, {
       method: 'POST',
       body: formData,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -255,7 +241,9 @@ export class APIClient {
   }
 
   async getFashionItem(id: string): Promise<FashionItem> {
-    const response = await fetch(`${this.baseUrl}/api/fashion-items/${encodeURIComponent(id)}`);
+    const response = await fetch(`${this.baseUrl}/api/fashion-items/${encodeURIComponent(id)}`, {
+      credentials: 'include'
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch fashion item');
     }
@@ -269,6 +257,7 @@ export class APIClient {
     const response = await fetch(`${this.baseUrl}/api/fashion-items/analyze`, {
       method: 'POST',
       body: formData,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -289,6 +278,7 @@ export class APIClient {
     const response = await fetch(`${this.baseUrl}/api/fashion-items`, {
       method: 'POST',
       body: formData,
+      credentials: 'include'
     });
 
     if (!response.ok) {

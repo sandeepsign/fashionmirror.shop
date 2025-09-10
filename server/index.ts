@@ -26,6 +26,7 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    sameSite: 'strict', // Additional CSRF protection
   },
   name: 'fashionmirror.sid',
 }));
