@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### September 10, 2025 - Text Prompt Functionality Implementation
+- **Added complete text prompt functionality for creative control** - Users can now provide custom instructions for pose changes, background modifications, and styling preferences
+- **Enhanced AI generation capabilities** - All generation workflows (progressive, simultaneous, batch, single-item) now incorporate user text prompts as "USER CREATIVE INSTRUCTIONS" 
+- **Frontend enhancements** - Added text input field in TryOnWorkspace component with 500-character limit and real-time character counter
+- **Complete API integration** - Updated all client-side API methods and backend endpoints to handle text prompt parameter with proper validation
+- **Data persistence** - Text prompts are stored in try-on result metadata for future reference and displayed in user galleries
+- **Server-side validation** - Added robust validation with proper error handling (400 Bad Request) for invalid text prompts
+
 ### September 10, 2025 - User Authentication and Data Isolation Implementation
 - Implemented complete user authentication system with email verification
 - Added user-specific activity history - each user sees only their own try-on results  
