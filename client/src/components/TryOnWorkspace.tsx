@@ -160,20 +160,28 @@ export default function TryOnWorkspace({
           textPrompt: textPrompt.trim() || undefined
         });
 
-        // Create result object from saved result
+        // Create result object from saved result, preserving server metadata
         const finalResult = {
           id: savedResult.result?.id || `progressive-${Date.now()}`,
           createdAt: new Date(),
           userId: user?.id || null,
-          modelImageUrl: URL.createObjectURL(modelImage!),
-          fashionImageUrl: stepResults[stepResults.length - 1],
-          resultImageUrl: stepResults[stepResults.length - 1],
-          fashionItemName: fashionItems.map(item => item.name).join(' + '),
-          fashionCategory: fashionItems.map(item => item.category).join(', '),
+          modelImageUrl: savedResult.result?.modelImageUrl || URL.createObjectURL(modelImage!),
+          fashionImageUrl: savedResult.result?.fashionImageUrl || stepResults[stepResults.length - 1],
+          resultImageUrl: savedResult.result?.resultImageUrl || stepResults[stepResults.length - 1],
+          fashionItemName: savedResult.result?.fashionItemName || fashionItems.map(item => item.name).join(' + '),
+          fashionCategory: savedResult.result?.fashionCategory || fashionItems.map(item => item.category).join(', '),
           metadata: {
+            // Merge server metadata with local metadata, preserving textPrompt
+            ...(savedResult.result?.metadata || {}),
             timestamp: new Date().toISOString(),
             generationType: 'progressive-step-by-step',
-            stepResults: stepResults
+            stepResults: stepResults,
+            textPrompt: textPrompt.trim() || undefined,
+            fashionItems: fashionItems.map(item => ({
+              name: item.name,
+              category: item.category,
+              source: item.source
+            }))
           }
         };
         
