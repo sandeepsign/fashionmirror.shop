@@ -104,6 +104,8 @@ export class MemStorage implements IStorage {
         ...item,
         id,
         description: item.description || null,
+        userId: null, // Default items are shared
+        isShared: "true", // Default items are available to all users
         createdAt: new Date()
       };
       this.fashionItems.set(id, fashionItem);
@@ -237,6 +239,8 @@ export class MemStorage implements IStorage {
       ...insertItem,
       id,
       description: insertItem.description || null,
+      userId: insertItem.userId ?? null,
+      isShared: insertItem.isShared ?? "false",
       createdAt: new Date()
     };
     this.fashionItems.set(id, item);
@@ -382,4 +386,15 @@ async function initializeDatabaseWithDefaults() {
 }
 
 // Export storage instance - use database storage
-export const storage = await initializeDatabaseWithDefaults();
+let storageInstance: IStorage;
+
+// Initialize storage asynchronously
+async function createStorageInstance(): Promise<IStorage> {
+  if (!storageInstance) {
+    storageInstance = await initializeDatabaseWithDefaults();
+  }
+  return storageInstance;
+}
+
+// Export a function to get the storage instance
+export const getStorage = createStorageInstance;

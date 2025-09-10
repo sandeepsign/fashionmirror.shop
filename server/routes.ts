@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { getStorage } from "./storage";
 import { insertTryOnResultSchema, registerUserSchema, loginUserSchema } from "@shared/schema";
 import { generateVirtualTryOn, generateSimultaneousTryOn, generateProgressiveTryOn, imageBufferToBase64 } from "./services/gemini";
 import { analyzeImageWithAI } from "./services/imageAnalyzer";
@@ -42,6 +42,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { username, email, password } = validationResult.data;
 
       // Check if user already exists
+      const storage = await getStorage();
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(409).json({ error: "User with this email already exists" });
@@ -107,6 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = validationResult.data;
 
       // Find user by email
+      const storage = await getStorage();
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({ error: "Invalid email or password" });
@@ -155,6 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedToken = hashVerificationToken(token);
 
       // Find user by verification token
+      const storage = await getStorage();
       const user = await storage.getUserByVerificationToken(hashedToken);
       
       if (!user) {
@@ -212,6 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/verify-email/:token", async (req, res) => {
     try {
       const { token } = req.params;
+      const storage = await getStorage();
       
       // Validate token format
       if (!token || typeof token !== 'string' || token.length < 10) {
@@ -278,6 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all fashion items
   app.get("/api/fashion-items", async (req, res) => {
     try {
+      const storage = await getStorage();
       const items = await storage.getFashionItems();
       res.json(items);
     } catch (error) {
@@ -290,6 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/fashion-items/category/:category", async (req, res) => {
     try {
       const { category } = req.params;
+      const storage = await getStorage();
       const items = await storage.getFashionItemsByCategory(category);
       res.json(items);
     } catch (error) {
@@ -303,6 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.query;
       if (userId) {
+        const storage = await getStorage();
         const results = await storage.getTryOnResultsByUserId(userId as string);
         res.json(results);
       } else {
@@ -387,6 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const resultImageUrl = `data:image/jpeg;base64,${result.resultImageBase64}`;
             
             // Save the try-on result
+            const storage = await getStorage();
             const tryOnResult = await storage.createTryOnResult({
               userId: userId || null,
               modelImageUrl,
@@ -500,6 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const combinedFashionCategory = 'Combined Outfit';
 
       // Save the try-on result
+      const storage = await getStorage();
       const tryOnResult = await storage.createTryOnResult({
         userId: userId || null,
         modelImageUrl,
@@ -663,6 +672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const combinedFashionCategory = 'Progressive Outfit';
 
       // Save the try-on result with progressive metadata
+      const storage = await getStorage();
       const tryOnResult = await storage.createTryOnResult({
         userId: userId || null,
         modelImageUrl,
@@ -744,6 +754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resultImageUrl = `data:image/jpeg;base64,${result.resultImageBase64}`;
 
       // Save the try-on result
+      const storage = await getStorage();
       const tryOnResult = await storage.createTryOnResult({
         userId: userId || null,
         modelImageUrl,
@@ -775,6 +786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/fashion-items/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      const storage = await getStorage();
       const item = await storage.getFashionItem(id);
       if (!item) {
         return res.status(404).json({ error: "Fashion item not found" });
@@ -818,6 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const imageBase64 = imageBufferToBase64(req.file.buffer);
       const imageUrl = `data:image/jpeg;base64,${imageBase64}`;
 
+      const storage = await getStorage();
       const newItem = await storage.createFashionItem({
         name,
         category,
