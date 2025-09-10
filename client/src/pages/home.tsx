@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import ModelUpload from "@/components/ModelUpload";
 import FashionUpload from "@/components/FashionUpload";
@@ -7,6 +7,7 @@ import TryOnWorkspace from "@/components/TryOnWorkspace";
 import ResultsGallery from "@/components/ResultsGallery";
 import LoadingModal from "@/components/LoadingModal";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FashionItem, TryOnResult } from "@shared/schema";
 import { FashionItemInput } from "@/lib/api";
 
@@ -20,6 +21,51 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ completed: 0, total: 0 });
+  const [verificationMessage, setVerificationMessage] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(null);
+
+  // Handle email verification URL parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const verification = urlParams.get('verification');
+    const email = urlParams.get('email');
+
+    if (verification) {
+      let message = '';
+      let type: 'success' | 'error' | 'info' = 'info';
+
+      switch (verification) {
+        case 'success':
+          message = `✅ Email verified successfully! ${email ? `Welcome, ${email}!` : ''} You can now log in to your FashionMirror account.`;
+          type = 'success';
+          break;
+        case 'already-verified':
+          message = '✅ Your email is already verified! You can log in to your account.';
+          type = 'info';
+          break;
+        case 'invalid':
+          message = '❌ Invalid or expired verification link. Please register again or contact support.';
+          type = 'error';
+          break;
+        case 'error':
+          message = '❌ Verification failed due to a technical error. Please try again or contact support.';
+          type = 'error';
+          break;
+        default:
+          break;
+      }
+
+      if (message) {
+        setVerificationMessage({ type, message });
+        
+        // Clean up URL parameters
+        const newUrl = window.location.pathname;
+        window.history.replaceState(null, '', newUrl);
+      }
+    }
+  }, []);
 
   const handleModelImageSelect = (file: File) => {
     setModelImage(file);
@@ -140,6 +186,25 @@ export default function Home() {
       <section className="gradient-bg py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
+            {/* Verification Message */}
+            {verificationMessage && (
+              <div className="mb-8">
+                <Alert className={
+                  verificationMessage.type === 'success' ? 'border-green-200 bg-green-50' :
+                  verificationMessage.type === 'error' ? 'border-red-200 bg-red-50' :
+                  'border-blue-200 bg-blue-50'
+                }>
+                  <AlertDescription className={
+                    verificationMessage.type === 'success' ? 'text-green-700' :
+                    verificationMessage.type === 'error' ? 'text-red-700' :
+                    'text-blue-700'
+                  }>
+                    {verificationMessage.message}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
             <h1 className="text-4xl md:text-6xl font-serif font-bold text-foreground mb-6">
               AI-Powered Fashion
               <span className="text-primary"> Try-On Studio</span>

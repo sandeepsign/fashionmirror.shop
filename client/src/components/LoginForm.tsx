@@ -16,11 +16,13 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verificationError, setVerificationError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setVerificationError("");
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -32,7 +34,13 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Login failed");
+        // Handle verification-specific errors
+        if (data.requiresVerification) {
+          setVerificationError(data.error);
+        } else {
+          throw new Error(data.error || "Login failed");
+        }
+        return;
       }
 
       onSuccess(data.user);
@@ -56,6 +64,18 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {verificationError && (
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertDescription className="text-amber-700">
+                📧 {verificationError}
+                <br /><br />
+                <strong>💡 Don't see the email?</strong>
+                <br />• Check your spam/junk folder
+                <br />• Make sure you entered the correct email address
+                <br />• Contact support if the email doesn't arrive
+              </AlertDescription>
             </Alert>
           )}
           <div className="space-y-2">

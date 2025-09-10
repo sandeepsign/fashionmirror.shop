@@ -20,11 +20,13 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -49,7 +51,14 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
         throw new Error(data.error || "Registration failed");
       }
 
-      onSuccess(data.user);
+      // Handle verification flow instead of immediate login
+      if (data.requiresVerification) {
+        setSuccess(data.message);
+        setFormData({ username: "", email: "", password: "", confirmPassword: "" });
+      } else {
+        // Fallback for non-verification registrations
+        onSuccess(data.user);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -74,6 +83,18 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert className="border-green-200 bg-green-50">
+              <AlertDescription className="text-green-700">
+                🎉 {success}
+                <br /><br />
+                <strong>📧 Next Steps:</strong>
+                <br />• Check your email inbox (and spam folder)
+                <br />• Click the verification link in the email
+                <br />• Return here to log in once verified
+              </AlertDescription>
             </Alert>
           )}
           <div className="space-y-2">

@@ -7,6 +7,8 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getUserByVerificationToken(hashedToken: string): Promise<User | undefined>;
+  updateUserVerification(id: string, isVerified: string, clearToken?: boolean): Promise<User>;
   
   getTryOnResult(id: string): Promise<TryOnResult | undefined>;
   getTryOnResultsByUserId(userId: string): Promise<TryOnResult[]>;
@@ -123,6 +125,9 @@ export class MemStorage implements IStorage {
       email: "admin", // Using "admin" as email since it's specified as the login
       password: hashedPassword,
       role: "admin",
+      isVerified: "true",
+      verificationToken: null,
+      verificationTokenExpires: null,
       createdAt: new Date()
     };
     
@@ -151,11 +156,39 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id, 
-      role: insertUser.role || "user", 
+      role: insertUser.role || "user",
+      isVerified: insertUser.isVerified || "false",
+      verificationToken: insertUser.verificationToken || null,
+      verificationTokenExpires: insertUser.verificationTokenExpires || null,
       createdAt: new Date() 
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async getUserByVerificationToken(hashedToken: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.verificationToken === hashedToken && 
+                user.verificationTokenExpires && 
+                user.verificationTokenExpires > new Date()
+    );
+  }
+
+  async updateUserVerification(id: string, isVerified: string, clearToken = true): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const updatedUser: User = {
+      ...user,
+      isVerified,
+      verificationToken: clearToken ? null : user.verificationToken,
+      verificationTokenExpires: clearToken ? null : user.verificationTokenExpires,
+    };
+
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   async getTryOnResult(id: string): Promise<TryOnResult | undefined> {

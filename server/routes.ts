@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertTryOnResultSchema, registerUserSchema, loginUserSchema } from "@shared/schema";
 import { generateVirtualTryOn, generateSimultaneousTryOn, generateProgressiveTryOn, imageBufferToBase64 } from "./services/gemini";
 import { analyzeImageWithAI } from "./services/imageAnalyzer";
+import { generateVerificationToken, hashVerificationToken, sendVerificationEmail, sendWelcomeEmail } from "./services/emailVerification";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import { z } from "zod";
@@ -55,21 +56,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const saltRounds = 12;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Create user
+      // Generate verification token
+      const verificationData = generateVerificationToken();
+
+      // Create user with unverified status
       const newUser = await storage.createUser({
         username,
         email,
         password: hashedPassword,
-        role: "user"
+        role: "user",
+        isVerified: "false",
+        verificationToken: verificationData.hashedToken,
+        verificationTokenExpires: verificationData.expiresAt
       });
 
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = newUser;
-      
-      res.status(201).json({ 
-        message: "User registered successfully", 
-        user: userWithoutPassword 
-      });
+      // Send verification email
+      try {
+        await sendVerificationEmail(email, username, verificationData.token);
+        
+        res.status(201).json({ 
+          message: "Registration successful! Please check your email to verify your account before logging in.",
+          requiresVerification: true
+        });
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+        res.status(201).json({ 
+          message: "Registration successful, but failed to send verification email. Please contact support.",
+          requiresVerification: true
+        });
+      }
 
     } catch (error) {
       console.error("Error during registration:", error);
@@ -97,6 +112,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
+      // Check if user is verified
+      if (user.isVerified !== "true") {
+        return res.status(401).json({ 
+          error: "Please verify your email address before logging in. Check your email for a verification link.",
+          requiresVerification: true,
+          email: user.email
+        });
+      }
+
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
@@ -114,6 +138,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error during login:", error);
       res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Email verification endpoint
+  app.get("/api/auth/verify/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      if (!token) {
+        return res.status(400).json({ error: "Verification token is required" });
+      }
+
+      // Hash the token for database lookup
+      const hashedToken = hashVerificationToken(token);
+
+      // Find user by verification token
+      const user = await storage.getUserByVerificationToken(hashedToken);
+      
+      if (!user) {
+        return res.status(400).json({ 
+          error: "Invalid or expired verification token. Please request a new verification email." 
+        });
+      }
+
+      // Check if already verified
+      if (user.isVerified === "true") {
+        return res.status(200).json({ 
+          message: "Email already verified. You can now log in.",
+          alreadyVerified: true
+        });
+      }
+
+      // Update user verification status
+      const verifiedUser = await storage.updateUserVerification(user.id, "true", true);
+
+      // Send welcome email
+      try {
+        await sendWelcomeEmail(user.email, user.username);
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+        // Continue even if welcome email fails
+      }
+
+      res.status(200).json({
+        message: "Email verified successfully! You can now log in to your account.",
+        verified: true
+      });
+
+    } catch (error) {
+      console.error("Error during email verification:", error);
+      res.status(500).json({ error: "Failed to verify email" });
+    }
+  });
+
+  // Frontend verification page endpoint 
+  app.get("/verify-email/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      // Hash the token for database lookup
+      const hashedToken = hashVerificationToken(token);
+      const user = await storage.getUserByVerificationToken(hashedToken);
+      
+      if (!user) {
+        // Redirect to frontend with error state
+        return res.redirect(`/?verification=invalid`);
+      }
+
+      if (user.isVerified === "true") {
+        // Already verified, redirect to login
+        return res.redirect(`/?verification=already-verified`);
+      }
+
+      // Update verification status
+      await storage.updateUserVerification(user.id, "true", true);
+
+      // Send welcome email  
+      try {
+        await sendWelcomeEmail(user.email, user.username);
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+      }
+
+      // Redirect to frontend with success state
+      res.redirect(`/?verification=success&email=${encodeURIComponent(user.email)}`);
+
+    } catch (error) {
+      console.error("Error in verification page:", error);
+      res.redirect(`/?verification=error`);
     }
   });
 
