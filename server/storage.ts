@@ -224,9 +224,15 @@ export class MemStorage implements IStorage {
       (result) => result.userId === userId,
     );
     // Sort by creation date (newest first) and limit to 20
+    // Exclude large image data for gallery view to prevent response size issues
     return results
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 20);
+      .slice(0, 20)
+      .map(result => ({
+        ...result,
+        resultImageBase64: '', // Clear heavy image data for gallery
+        modelImageBase64: ''   // Clear heavy image data for gallery
+      }));
   }
 
   async createTryOnResult(insertResult: InsertTryOnResult): Promise<TryOnResult> {
@@ -381,10 +387,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTryOnResultsByUserId(userId: string): Promise<TryOnResult[]> {
-    return await this.db.select().from(tryOnResults)
+    // Get all fields but replace heavy image data with empty strings for gallery
+    const results = await this.db.select().from(tryOnResults)
       .where(eq(tryOnResults.userId, userId))
       .orderBy(desc(tryOnResults.createdAt))
-      .limit(20); // Limit to prevent database response size issues
+      .limit(20);
+    
+    // Strip out heavy base64 image data for gallery display to prevent response size issues
+    return results.map(result => ({
+      ...result,
+      modelImageUrl: result.modelImageUrl.length > 1000 ? '' : result.modelImageUrl,
+      fashionImageUrl: result.fashionImageUrl.length > 1000 ? '' : result.fashionImageUrl,
+      resultImageUrl: result.resultImageUrl.length > 1000 ? '' : result.resultImageUrl
+    }));
   }
 
   async createTryOnResult(result: InsertTryOnResult): Promise<TryOnResult> {
