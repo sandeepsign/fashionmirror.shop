@@ -25,10 +25,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Allow non-HTTPS in Replit deployment
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    sameSite: 'strict', // Additional CSRF protection
+    sameSite: 'lax', // Less restrictive for deployment compatibility
   },
   name: 'fashionmirror.sid',
 }));
