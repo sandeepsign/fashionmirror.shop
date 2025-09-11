@@ -298,7 +298,7 @@ export default function TryOnWorkspace({
                     </p>
                     {isGenerating && (
                       <p className="text-xs text-muted-foreground opacity-75">
-                        Step {generationProgress.completed} of {selectedItemsCount}
+                        Step {Math.min(generationProgress.completed + (isGenerating ? 1 : 0), selectedItemsCount)} of {selectedItemsCount}
                       </p>
                     )}
                   </div>
