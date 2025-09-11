@@ -287,6 +287,37 @@ export default function TryOnWorkspace({
             <h3 className="text-lg font-medium text-foreground text-center">
               {isGenerating ? "AI Processing" : showStatusView ? "Generation Complete" : "Fashion Items"}
             </h3>
+            <div className="space-y-4">
+              {/* Creative Instructions - Optional Field */}
+              <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <i className="fas fa-palette text-accent"></i>
+                  <h4 className="text-sm font-medium text-foreground">Additional Creative Control</h4>
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">Optional</span>
+                </div>
+                <div className="relative">
+                  <textarea
+                    value={textPrompt}
+                    onChange={(e) => setTextPrompt(e.target.value)}
+                    placeholder="e.g. Change pose to casual sitting, add elegant studio lighting, outdoor background..."
+                    className="w-full p-3 border border-border/50 rounded-lg bg-background/50 text-foreground placeholder:text-muted-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                    rows={2}
+                    maxLength={500}
+                    data-testid="textarea-text-prompt"
+                  />
+                  <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                    {textPrompt.length}/500
+                  </div>
+                </div>
+                {textPrompt && (
+                  <div className="flex items-center text-xs text-accent/80 mt-2">
+                    <i className="fas fa-magic mr-1"></i>
+                    Creative instructions will guide the AI generation
+                  </div>
+                )}
+              </div>
+            </div>
+            
             <div className="aspect-[3/4] bg-muted rounded-xl flex items-center justify-center relative">
               {isGenerating || showStatusView ? (
                 <div className="space-y-4 p-4 h-full">
@@ -569,37 +600,6 @@ export default function TryOnWorkspace({
           </div>
         </div>
         
-        {/* Text Prompt Input */}
-        <div className="mt-8 max-w-2xl mx-auto">
-          <div className="space-y-4">
-            <div className="text-center">
-              <h3 className="text-lg font-medium text-foreground mb-2">Creative Instructions</h3>
-              <p className="text-sm text-muted-foreground">
-                Add custom instructions to control pose, background, setting, or any creative adjustments
-              </p>
-            </div>
-            <div className="relative">
-              <textarea
-                value={textPrompt}
-                onChange={(e) => setTextPrompt(e.target.value)}
-                placeholder="e.g. Change the pose to casual sitting, add a studio background, make it more elegant..."
-                className="w-full p-4 border border-border rounded-xl bg-background text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                rows={3}
-                maxLength={500}
-                data-testid="textarea-text-prompt"
-              />
-              <div className="absolute bottom-3 right-3 text-xs text-muted-foreground">
-                {textPrompt.length}/500
-              </div>
-            </div>
-            {textPrompt && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <i className="fas fa-lightbulb mr-2"></i>
-                Your creative instructions will be applied to the AI generation
-              </div>
-            )}
-          </div>
-        </div>
         
         {/* Action Buttons */}
         <div className="flex justify-center space-x-4 mt-8">
