@@ -1,7 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import path from "path";
 import { registerRoutes } from "./routes";
+import { registerMediaRoutes } from "./routes/media";
 import { setupVite, serveStatic, log } from "./vite";
 import "./types/session"; // Import session type definitions
 
@@ -62,6 +64,19 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Setup static serving for public media files
+  const mediaRoot = process.env.MEDIA_ROOT || path.join(process.cwd(), 'uploads');
+  app.use('/media/public', express.static(path.join(mediaRoot, 'public'), {
+    maxAge: '7d',
+    etag: true,
+    setHeaders: (res) => {
+      res.set('X-Content-Type-Options', 'nosniff');
+    }
+  }));
+
+  // Register media routes for protected content
+  registerMediaRoutes(app);
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

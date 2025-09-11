@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
+import { mediaStorage } from "./mediaStorage";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || "" });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "" });
@@ -142,7 +143,7 @@ export interface VirtualTryOnRequest {
 }
 
 export interface VirtualTryOnResponse {
-  resultImageBase64: string;
+  resultImageUrl: string;
   success: boolean;
   error?: string;
 }
@@ -154,7 +155,7 @@ export interface SimultaneousTryOnRequest {
 }
 
 export interface SimultaneousTryOnResponse {
-  resultImageBase64: string;
+  resultImageUrl: string;
   success: boolean;
   error?: string;
 }
@@ -166,10 +167,10 @@ export interface ProgressiveTryOnRequest {
 }
 
 export interface ProgressiveTryOnResponse {
-  resultImageBase64: string;
+  resultImageUrl: string;
   success: boolean;
   error?: string;
-  stepResults?: string[]; // Array of intermediate results
+  stepResults?: string[]; // Array of intermediate result URLs
 }
 
 export async function generateVirtualTryOn({
@@ -177,8 +178,9 @@ export async function generateVirtualTryOn({
   fashionImageBase64,
   fashionItemName,
   fashionCategory,
-  textPrompt
-}: VirtualTryOnRequest): Promise<VirtualTryOnResponse> {
+  textPrompt,
+  userId
+}: VirtualTryOnRequest & { userId: string }): Promise<VirtualTryOnResponse> {
   try {
     // First test if the API key works with a simple text model
     try {
@@ -192,7 +194,7 @@ export async function generateVirtualTryOn({
       return {
         success: false,
         error: `API key test failed: ${testError instanceof Error ? testError.message : "Unknown error"}`,
-        resultImageBase64: ""
+        resultImageUrl: ""
       };
     }
 
@@ -255,7 +257,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
       return {
         success: false,
         error: "No candidates returned from AI model",
-        resultImageBase64: ""
+        resultImageUrl: ""
       };
     }
 
@@ -264,15 +266,17 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
       return {
         success: false,
         error: "No content parts returned from AI model",
-        resultImageBase64: ""
+        resultImageUrl: ""
       };
     }
 
     for (const part of content.parts) {
       if (part.inlineData && part.inlineData.data) {
+        // Save image to filesystem and return URL
+        const imageUrl = await saveImageToFilesystem(part.inlineData.data, userId, 'result');
         return {
           success: true,
-          resultImageBase64: part.inlineData.data
+          resultImageUrl: imageUrl
         };
       }
     }
@@ -285,7 +289,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
     return {
       success: false,
       error: "No image data found in response. This might be due to content moderation or the AI model being unable to process the image combination. Try with a different model photo or fashion item.",
-      resultImageBase64: ""
+      resultImageUrl: ""
     };
 
   } catch (error) {
@@ -293,7 +297,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred",
-      resultImageBase64: ""
+      resultImageUrl: ""
     };
   }
 }
@@ -301,8 +305,9 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
 export async function generateSimultaneousTryOn({
   modelImageBase64,
   fashionImagesBase64,
-  textPrompt
-}: SimultaneousTryOnRequest): Promise<SimultaneousTryOnResponse> {
+  textPrompt,
+  userId
+}: SimultaneousTryOnRequest & { userId: string }): Promise<SimultaneousTryOnResponse> {
   try {
     // Test API key first
     try {
@@ -316,7 +321,7 @@ export async function generateSimultaneousTryOn({
       return {
         success: false,
         error: `API key test failed: ${testError instanceof Error ? testError.message : "Unknown error"}`,
-        resultImageBase64: ""
+        resultImageUrl: ""
       };
     }
 
@@ -405,7 +410,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
       return {
         success: false,
         error: "No candidates returned from AI model",
-        resultImageBase64: ""
+        resultImageUrl: ""
       };
     }
 
@@ -414,15 +419,17 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
       return {
         success: false,
         error: "No content parts returned from AI model",
-        resultImageBase64: ""
+        resultImageUrl: ""
       };
     }
 
     for (const part of content.parts) {
       if (part.inlineData && part.inlineData.data) {
+        // Save image to filesystem and return URL
+        const imageUrl = await saveImageToFilesystem(part.inlineData.data, userId, 'result');
         return {
           success: true,
-          resultImageBase64: part.inlineData.data
+          resultImageUrl: imageUrl
         };
       }
     }
@@ -435,7 +442,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
     return {
       success: false,
       error: "No image data found in response. This might be due to content moderation or the AI model being unable to process the image combination. Try with different images or reduce the number of fashion items.",
-      resultImageBase64: ""
+      resultImageUrl: ""
     };
 
   } catch (error) {
@@ -443,7 +450,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred",
-      resultImageBase64: ""
+      resultImageUrl: ""
     };
   }
 }
@@ -456,11 +463,29 @@ export function base64ToImageBuffer(base64: string): Buffer {
   return Buffer.from(base64, "base64");
 }
 
+// Helper function to save base64 image to filesystem and return URL
+async function saveImageToFilesystem(base64: string, userId: string, type: 'model' | 'fashion' | 'result' = 'result'): Promise<string> {
+  try {
+    const buffer = base64ToImageBuffer(base64);
+    const result = await mediaStorage.saveImage(buffer, {
+      visibility: 'protected',
+      type,
+      userId,
+      ext: 'jpg'
+    });
+    return result.url;
+  } catch (error) {
+    console.error('Error saving image to filesystem:', error);
+    throw new Error(`Failed to save image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 export async function generateProgressiveTryOn({
   modelImageBase64,
   fashionImagesBase64,
-  textPrompt
-}: ProgressiveTryOnRequest): Promise<ProgressiveTryOnResponse> {
+  textPrompt,
+  userId
+}: ProgressiveTryOnRequest & { userId: string }): Promise<ProgressiveTryOnResponse> {
   try {
     console.log("Starting progressive try-on generation with", fashionImagesBase64.length, "items");
     
@@ -487,7 +512,7 @@ export async function generateProgressiveTryOn({
         return {
           success: false,
           error: `API key test failed at step ${stepNumber}: ${testError instanceof Error ? testError.message : "Unknown error"}`,
-          resultImageBase64: "",
+          resultImageUrl: "",
           stepResults
         };
       }
@@ -553,7 +578,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
         return {
           success: false,
           error: `No candidates returned from AI model at step ${stepNumber}`,
-          resultImageBase64: "",
+          resultImageUrl: "",
           stepResults
         };
       }
@@ -563,7 +588,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
         return {
           success: false,
           error: `No content parts returned from AI model at step ${stepNumber}`,
-          resultImageBase64: "",
+          resultImageUrl: "",
           stepResults
         };
       }
@@ -573,7 +598,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
         return {
           success: false,
           error: `No image data returned from AI model at step ${stepNumber}`,
-          resultImageBase64: "",
+          resultImageUrl: "",
           stepResults
         };
       }
@@ -583,7 +608,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
         return {
           success: false,
           error: `No image data returned from AI model at step ${stepNumber}`,
-          resultImageBase64: "",
+          resultImageUrl: "",
           stepResults
         };
       }
@@ -600,7 +625,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
     
     return {
       success: true,
-      resultImageBase64: currentModelImage, // Final result
+      resultImageUrl: await saveImageToFilesystem(currentModelImage, userId, 'result'), // Final result
       stepResults
     };
 
@@ -608,7 +633,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
     return {
       success: false,
       error: `Error generating progressive try-on: ${error instanceof Error ? error.message : "Unknown error"}`,
-      resultImageBase64: "",
+      resultImageUrl: "",
       stepResults: []
     };
   }
