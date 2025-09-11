@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq, or, and, sql } from "drizzle-orm";
+import { eq, or, and, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -358,7 +358,7 @@ export class DatabaseStorage implements IStorage {
   async getTryOnResultsByUserId(userId: string): Promise<TryOnResult[]> {
     return await this.db.select().from(tryOnResults)
       .where(eq(tryOnResults.userId, userId))
-      .orderBy(sql`${tryOnResults.createdAt} DESC`)
+      .orderBy(desc(tryOnResults.createdAt))
       .limit(20); // Limit to prevent database response size issues
   }
 
