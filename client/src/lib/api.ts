@@ -322,6 +322,30 @@ export class APIClient {
     return response.json();
   }
 
+  async deleteFashionItem(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${this.baseUrl}/api/fashion-items/${id}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete fashion item');
+    }
+    return response.json();
+  }
+
+  async deleteTryOnResult(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${this.baseUrl}/api/try-on-results/${id}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete try-on result');
+    }
+    return response.json();
+  }
+
   async healthCheck(): Promise<any> {
     const response = await fetch(`${this.baseUrl}/api/health`);
     if (!response.ok) {

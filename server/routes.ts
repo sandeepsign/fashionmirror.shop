@@ -356,6 +356,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete fashion item endpoint
+  app.delete("/api/fashion-items/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({ error: "Fashion item ID is required" });
+      }
+
+      const storage = await getStorage();
+      const success = await storage.deleteFashionItem(id, req.user!.id);
+
+      if (!success) {
+        return res.status(404).json({ error: "Fashion item not found or you don't have permission to delete it" });
+      }
+
+      res.json({ success: true, message: "Fashion item deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting fashion item:", error);
+      res.status(500).json({ error: "Failed to delete fashion item" });
+    }
+  });
+
+  // Delete try-on result endpoint
+  app.delete("/api/try-on-results/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({ error: "Try-on result ID is required" });
+      }
+
+      const storage = await getStorage();
+      const success = await storage.deleteTryOnResult(id, req.user!.id);
+
+      if (!success) {
+        return res.status(404).json({ error: "Try-on result not found or you don't have permission to delete it" });
+      }
+
+      res.json({ success: true, message: "Try-on result deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting try-on result:", error);
+      res.status(500).json({ error: "Failed to delete try-on result" });
+    }
+  });
+
   // Generate batch virtual try-on
   app.post("/api/try-on/generate-batch", requireAuth, upload.array('files'), async (req, res) => {
     try {

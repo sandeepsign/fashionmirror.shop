@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { FashionItem } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,31 @@ const categories = [
 export default function FashionCollection({ onItemSelect, selectedItems }: FashionCollectionProps) {
   const [activeCategory, setActiveCategory] = useState("all");
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: fashionItems, isLoading, error } = useQuery({
     queryKey: ["/api/fashion-items", user?.id],
-    queryFn: () => apiClient.getFashionItems(user?.id),
+    queryFn: () => apiClient.getFashionItems(),
   });
 
   const filteredItems = fashionItems?.filter(item => 
     activeCategory === "all" || item.category.toLowerCase() === activeCategory
   ) || [];
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!confirm("Are you sure you want to delete this fashion item? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await apiClient.deleteFashionItem(itemId);
+      // Invalidate and refetch fashion items
+      queryClient.invalidateQueries({ queryKey: ["/api/fashion-items"] });
+    } catch (error) {
+      console.error("Failed to delete fashion item:", error);
+      alert("Failed to delete the fashion item. Please try again.");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -102,26 +118,45 @@ export default function FashionCollection({ onItemSelect, selectedItems }: Fashi
         {filteredItems.map((item) => (
           <div
             key={item.id}
-            className={`fashion-card rounded-xl overflow-hidden cursor-pointer ${
+            className={`fashion-card rounded-xl overflow-hidden relative group ${
               selectedItems.some(selected => selected.id === item.id) ? "selected" : ""
             }`}
-            onClick={() => onItemSelect(item)}
             data-testid={`card-fashion-${item.id}`}
           >
-            <img 
-              src={item.imageUrl} 
-              alt={item.name} 
-              className="w-full h-64 object-cover"
-              data-testid={`img-fashion-${item.id}`}
-            />
-            <div className="p-4">
-              <h3 className="font-medium text-foreground mb-1" data-testid={`text-fashion-name-${item.id}`}>
-                {item.name}
-              </h3>
-              <p className="text-sm text-muted-foreground" data-testid={`text-fashion-category-${item.id}`}>
-                {item.category}
-              </p>
+            <div
+              className="cursor-pointer"
+              onClick={() => onItemSelect(item)}
+            >
+              <img 
+                src={item.imageUrl} 
+                alt={item.name} 
+                className="w-full h-64 object-cover"
+                data-testid={`img-fashion-${item.id}`}
+              />
+              <div className="p-4">
+                <h3 className="font-medium text-foreground mb-1" data-testid={`text-fashion-name-${item.id}`}>
+                  {item.name}
+                </h3>
+                <p className="text-sm text-muted-foreground" data-testid={`text-fashion-category-${item.id}`}>
+                  {item.category}
+                </p>
+              </div>
             </div>
+            
+            {/* Delete button - only show for user's own items */}
+            {user && item.userId === user.id && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteItem(item.id);
+                }}
+                className="absolute top-2 right-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                data-testid={`button-delete-${item.id}`}
+                title="Delete this item"
+              >
+                <i className="fas fa-trash text-sm"></i>
+              </button>
+            )}
           </div>
         ))}
       </div>

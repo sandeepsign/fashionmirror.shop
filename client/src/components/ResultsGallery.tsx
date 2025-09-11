@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { apiClient } from "@/lib/api";
 import { TryOnResult } from "@shared/schema";
@@ -12,10 +12,11 @@ interface ResultsGalleryProps {
 
 export default function ResultsGallery({ latestResults = [] }: ResultsGalleryProps) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: results, isLoading, error } = useQuery({
     queryKey: ["/api/try-on-results", user?.id],
-    queryFn: () => apiClient.getTryOnResults(user?.id),
+    queryFn: () => apiClient.getTryOnResults(),
     enabled: !!user?.id, // Only fetch when user is authenticated
   });
 
@@ -52,6 +53,21 @@ export default function ResultsGallery({ latestResults = [] }: ResultsGalleryPro
       } catch (error) {
         console.log('Error copying to clipboard:', error);
       }
+    }
+  };
+
+  const handleDelete = async (resultId: string) => {
+    if (!confirm("Are you sure you want to delete this try-on result? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await apiClient.deleteTryOnResult(resultId);
+      // Invalidate and refetch try-on results
+      queryClient.invalidateQueries({ queryKey: ["/api/try-on-results"] });
+    } catch (error) {
+      console.error("Failed to delete try-on result:", error);
+      alert("Failed to delete the try-on result. Please try again.");
     }
   };
 
@@ -132,7 +148,7 @@ export default function ResultsGallery({ latestResults = [] }: ResultsGalleryPro
           {allResults.map((result, index) => (
             <div 
               key={result.id} 
-              className="bg-card rounded-xl overflow-hidden shadow-lg border border-border"
+              className="bg-card rounded-xl overflow-hidden shadow-lg border border-border relative group"
               data-testid={`card-result-${index}`}
             >
               <img 
@@ -141,6 +157,17 @@ export default function ResultsGallery({ latestResults = [] }: ResultsGalleryPro
                 className="w-full h-64 object-cover"
                 data-testid={`img-result-${index}`}
               />
+              
+              {/* Delete button */}
+              <button
+                onClick={() => handleDelete(result.id)}
+                className="absolute top-2 right-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                data-testid={`button-delete-result-${index}`}
+                title="Delete this result"
+              >
+                <i className="fas fa-trash text-sm"></i>
+              </button>
+
               <div className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-foreground" data-testid={`text-result-name-${index}`}>

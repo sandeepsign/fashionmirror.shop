@@ -16,11 +16,13 @@ export interface IStorage {
   getTryOnResult(id: string): Promise<TryOnResult | undefined>;
   getTryOnResultsByUserId(userId: string): Promise<TryOnResult[]>;
   createTryOnResult(result: InsertTryOnResult): Promise<TryOnResult>;
+  deleteTryOnResult(id: string, userId: string): Promise<boolean>;
   
   getFashionItem(id: string): Promise<FashionItem | undefined>;
   getFashionItems(userId?: string): Promise<FashionItem[]>;
   getFashionItemsByCategory(category: string, userId?: string): Promise<FashionItem[]>;
   createFashionItem(item: InsertFashionItem): Promise<FashionItem>;
+  deleteFashionItem(id: string, userId: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -268,6 +270,36 @@ export class MemStorage implements IStorage {
     this.fashionItems.set(id, item);
     return item;
   }
+
+  async deleteTryOnResult(id: string, userId: string): Promise<boolean> {
+    const result = this.tryOnResults.get(id);
+    if (!result) {
+      return false;
+    }
+    
+    // Check if user owns this result
+    if (result.userId !== userId) {
+      return false;
+    }
+    
+    this.tryOnResults.delete(id);
+    return true;
+  }
+
+  async deleteFashionItem(id: string, userId: string): Promise<boolean> {
+    const item = this.fashionItems.get(id);
+    if (!item) {
+      return false;
+    }
+    
+    // Check if user owns this item (users can only delete their own items, not shared items)
+    if (item.userId !== userId) {
+      return false;
+    }
+    
+    this.fashionItems.delete(id);
+    return true;
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -374,6 +406,28 @@ export class DatabaseStorage implements IStorage {
   async createFashionItem(item: InsertFashionItem): Promise<FashionItem> {
     const result = await this.db.insert(fashionItems).values(item).returning();
     return result[0];
+  }
+
+  async deleteTryOnResult(id: string, userId: string): Promise<boolean> {
+    const result = await this.db.delete(tryOnResults).where(
+      and(
+        eq(tryOnResults.id, id),
+        eq(tryOnResults.userId, userId)
+      )
+    ).returning();
+    
+    return result.length > 0;
+  }
+
+  async deleteFashionItem(id: string, userId: string): Promise<boolean> {
+    const result = await this.db.delete(fashionItems).where(
+      and(
+        eq(fashionItems.id, id),
+        eq(fashionItems.userId, userId)
+      )
+    ).returning();
+    
+    return result.length > 0;
   }
 }
 
