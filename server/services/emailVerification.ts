@@ -44,11 +44,11 @@ export async function sendVerificationEmail(
   verificationToken: string
 ): Promise<void> {
   // Construct the proper base URL for both development and production environments
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : process.env.NODE_ENV === 'production' 
-      ? (process.env.PRODUCTION_URL || 'http://localhost:5000')
-      : 'http://localhost:5000';
+  const baseUrl = process.env.REPLIT_DEPLOYMENT === '1'
+    ? 'https://fashionmirror.shop' // Production custom domain
+    : process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}` // Development Replit domain
+      : 'http://localhost:5000'; // Local development
     
   const verificationUrl = `${baseUrl}/verify-email/${verificationToken}`;
   
