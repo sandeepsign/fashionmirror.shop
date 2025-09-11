@@ -50,6 +50,11 @@ export interface SimultaneousTryOnResult {
   stepResults?: string[]; // Array of base64 encoded intermediate results
 }
 
+export interface ResendVerificationResponse {
+  message: string;
+  error?: string;
+}
+
 export interface ProgressiveStepRequest {
   modelImage: File;
   fashionImage: File;
@@ -352,6 +357,25 @@ export class APIClient {
       throw new Error('Health check failed');
     }
     return response.json();
+  }
+
+  // Resend verification email
+  async resendVerificationEmail(email: string): Promise<ResendVerificationResponse> {
+    const response = await fetch(`${this.baseUrl}/api/auth/resend-verification`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to resend verification email");
+    }
+
+    return data;
   }
 }
 

@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
+import { apiClient } from "@/lib/api";
 
 interface LoginFormProps {
   onSuccess: (user: any) => void;
@@ -17,12 +18,15 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [verificationError, setVerificationError] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setVerificationError("");
+    setResendMessage("");
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -51,6 +55,26 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError("Please enter your email address first");
+      return;
+    }
+
+    setResendLoading(true);
+    setResendMessage("");
+    setError("");
+
+    try {
+      const response = await apiClient.resendVerificationEmail(email);
+      setResendMessage(response.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend verification email");
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -75,6 +99,33 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
                 <br />• Check your spam/junk folder
                 <br />• Make sure you entered the correct email address
                 <br />• Contact support if the email doesn't arrive
+                <br /><br />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleResendVerification}
+                  disabled={resendLoading}
+                  className="mt-2 bg-white border-amber-300 text-amber-700 hover:bg-amber-50"
+                >
+                  {resendLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Resending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-3 w-3" />
+                      Resend Verification Email
+                    </>
+                  )}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          {resendMessage && (
+            <Alert className="border-green-200 bg-green-50">
+              <AlertDescription className="text-green-700">
+                ✅ {resendMessage}
               </AlertDescription>
             </Alert>
           )}

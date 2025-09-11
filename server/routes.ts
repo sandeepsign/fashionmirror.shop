@@ -112,6 +112,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Resend verification email
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      // Find user by email
+      const storage = await getStorage();
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Don't reveal that user doesn't exist for security reasons
+        return res.status(200).json({ 
+          message: "If an account with this email exists and is unverified, a new verification email has been sent." 
+        });
+      }
+
+      // Check if user is already verified
+      if (user.isVerified === "true") {
+        return res.status(400).json({ 
+          error: "This account is already verified. Please try logging in." 
+        });
+      }
+
+      // Generate new verification token
+      const verificationData = generateVerificationToken();
+      
+      // Update user with new verification token
+      await storage.updateUserVerificationToken(user.id, verificationData.hashedToken, verificationData.expiresAt);
+
+      // Send verification email
+      try {
+        await sendVerificationEmail(email, user.username, verificationData.token);
+        res.status(200).json({ 
+          message: "A new verification email has been sent. Please check your email." 
+        });
+      } catch (emailError) {
+        console.error("Failed to resend verification email:", emailError);
+        res.status(500).json({ 
+          error: "Failed to send verification email. Please try again later." 
+        });
+      }
+
+    } catch (error) {
+      console.error("Error during resend verification:", error);
+      res.status(500).json({ error: "Failed to resend verification email" });
+    }
+  });
+
   // User login
   app.post("/api/auth/login", async (req, res) => {
     try {

@@ -12,6 +12,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUserByVerificationToken(hashedToken: string): Promise<User | undefined>;
   updateUserVerification(id: string, isVerified: string, clearToken?: boolean): Promise<User>;
+  updateUserVerificationToken(id: string, hashedToken: string, expiresAt: Date): Promise<User>;
   
   getTryOnResult(id: string): Promise<TryOnResult | undefined>;
   getTryOnResultsByUserId(userId: string): Promise<TryOnResult[]>;
@@ -198,6 +199,22 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
+  async updateUserVerificationToken(id: string, hashedToken: string, expiresAt: Date): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const updatedUser: User = {
+      ...user,
+      verificationToken: hashedToken,
+      verificationTokenExpires: expiresAt,
+    };
+
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
   async getTryOnResult(id: string): Promise<TryOnResult | undefined> {
     return this.tryOnResults.get(id);
   }
@@ -347,6 +364,14 @@ export class DatabaseStorage implements IStorage {
       updateData.verificationTokenExpires = null;
     }
     const result = await this.db.update(users).set(updateData).where(eq(users.id, id)).returning();
+    return result[0];
+  }
+
+  async updateUserVerificationToken(id: string, hashedToken: string, expiresAt: Date): Promise<User> {
+    const result = await this.db.update(users).set({
+      verificationToken: hashedToken,
+      verificationTokenExpires: expiresAt
+    }).where(eq(users.id, id)).returning();
     return result[0];
   }
 
