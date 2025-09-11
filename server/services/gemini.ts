@@ -200,6 +200,8 @@ export async function generateVirtualTryOn({
     const itemInstructions = await generateItemInstructions([fashionImageBase64]);
     console.log("Generated item-specific instructions:", itemInstructions);
 
+    console.log(`Generating with textPrompt: ${textPrompt ? `"${textPrompt}"` : 'undefined/empty'}`);
+    
     const prompt = `CRITICAL INSTRUCTION: You must preserve the EXACT SAME PERSON'S FACE from the first image. This is the most important requirement.
 
 FACE PRESERVATION (ABSOLUTELY MANDATORY):
