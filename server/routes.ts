@@ -632,6 +632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fashionImage = files.fashionImage[0];
 
       console.log(`Generating step ${stepNumber || '1'}: Processing ${fashionItemName}`);
+      console.log(`TextPrompt received: ${textPrompt ? `"${textPrompt}"` : 'undefined/empty'}`);
 
       // Convert images to base64
       const modelImageBase64 = imageBufferToBase64(modelImage.buffer);
