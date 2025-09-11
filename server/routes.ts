@@ -527,14 +527,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fashionImageBase64,
             fashionItemName: item.name,
             fashionCategory: item.category,
-            textPrompt
+            textPrompt,
+            userId
           });
           
           if (result.success) {
-            // Create data URLs for the images
+            // Create data URLs for the images (model and fashion)
             const modelImageUrl = `data:${modelImage.mimetype};base64,${modelImageBase64}`;
             const fashionImageUrl = `data:${item.image.mimetype};base64,${fashionImageBase64}`;
-            const resultImageUrl = `data:image/jpeg;base64,${result.resultImageBase64}`;
+            // Result image is now a filesystem URL
+            const resultImageUrl = result.resultImageUrl;
             
             // Save the try-on result
             const storage = await getStorage();
@@ -642,7 +644,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await generateSimultaneousTryOn({
         modelImageBase64,
         fashionImagesBase64,
-        textPrompt
+        textPrompt,
+        userId
       });
 
       if (!result.success) {
@@ -656,7 +659,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fashionImageUrls = fashionItems.map((item, index) => 
         `data:${item.image.mimetype};base64,${fashionImagesBase64[index]}`
       );
-      const resultImageUrl = `data:image/jpeg;base64,${result.resultImageBase64}`;
+      // Result image is now a filesystem URL
+      const resultImageUrl = result.resultImageUrl;
 
       // Create a combined fashion item name for display purposes
       const combinedFashionItemName = fashionItems.map(item => item.name).join(', ');
@@ -742,7 +746,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fashionImageBase64,
         fashionItemName,
         fashionCategory,
-        textPrompt
+        textPrompt,
+        userId
       });
 
       if (!result.success) {
@@ -754,7 +759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         stepNumber: parseInt(stepNumber) || 1,
-        resultImageBase64: result.resultImageBase64
+        resultImageUrl: result.resultImageUrl
       });
       
     } catch (error) {
@@ -829,7 +834,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await generateProgressiveTryOn({
         modelImageBase64,
         fashionImagesBase64,
-        textPrompt
+        textPrompt,
+        userId
       });
 
       if (!result.success) {
@@ -843,7 +849,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fashionImageUrls = fashionItems.map((item, index) => 
         `data:${item.image.mimetype};base64,${fashionImagesBase64[index]}`
       );
-      const resultImageUrl = `data:image/jpeg;base64,${result.resultImageBase64}`;
+      // Result image is now a filesystem URL
+      const resultImageUrl = result.resultImageUrl;
 
       // Create a combined fashion item name for display purposes
       const combinedFashionItemName = fashionItems.map(item => item.name).join(', ');
@@ -928,7 +935,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fashionImageBase64,
         fashionItemName,
         fashionCategory,
-        textPrompt
+        textPrompt,
+        userId
       });
 
       if (!result.success) {
@@ -940,7 +948,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For demo purposes, create data URLs for the images
       const modelImageUrl = `data:${modelImage.mimetype};base64,${modelImageBase64}`;
       const fashionImageUrl = `data:${fashionImage.mimetype};base64,${fashionImageBase64}`;
-      const resultImageUrl = `data:image/jpeg;base64,${result.resultImageBase64}`;
+      // Result image is now a filesystem URL
+      const resultImageUrl = result.resultImageUrl;
 
       // Save the try-on result
       const storage = await getStorage();
