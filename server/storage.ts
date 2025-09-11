@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq, or, and } from "drizzle-orm";
+import { eq, or, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -203,9 +203,13 @@ export class MemStorage implements IStorage {
   }
 
   async getTryOnResultsByUserId(userId: string): Promise<TryOnResult[]> {
-    return Array.from(this.tryOnResults.values()).filter(
+    const results = Array.from(this.tryOnResults.values()).filter(
       (result) => result.userId === userId,
     );
+    // Sort by creation date (newest first) and limit to 20
+    return results
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 20);
   }
 
   async createTryOnResult(insertResult: InsertTryOnResult): Promise<TryOnResult> {
@@ -352,7 +356,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTryOnResultsByUserId(userId: string): Promise<TryOnResult[]> {
-    return await this.db.select().from(tryOnResults).where(eq(tryOnResults.userId, userId));
+    return await this.db.select().from(tryOnResults)
+      .where(eq(tryOnResults.userId, userId))
+      .orderBy(sql`${tryOnResults.createdAt} DESC`)
+      .limit(20); // Limit to prevent database response size issues
   }
 
   async createTryOnResult(result: InsertTryOnResult): Promise<TryOnResult> {
