@@ -47,7 +47,7 @@ export interface SimultaneousTryOnResult {
   success: boolean;
   result?: TryOnResult;
   error?: string;
-  stepResults?: string[]; // Array of base64 encoded intermediate results
+  stepResults?: string[]; // Array of intermediate result URLs
 }
 
 export interface ResendVerificationResponse {
@@ -67,7 +67,7 @@ export interface ProgressiveStepRequest {
 export interface ProgressiveStepResult {
   success: boolean;
   stepNumber: number;
-  resultImageBase64: string;
+  resultImageUrl: string;
   error?: string;
 }
 

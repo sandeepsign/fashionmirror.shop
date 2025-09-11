@@ -127,8 +127,8 @@ export default function TryOnWorkspace({
             throw new Error(stepResponse.error || `Failed to generate step ${i + 1}`);
           }
           
-          // Convert base64 result to blob and create File for next step
-          const stepImageUrl = `data:image/jpeg;base64,${stepResponse.resultImageBase64}`;
+          // Use the filesystem URL directly from server response
+          const stepImageUrl = stepResponse.resultImageUrl;
           stepResults.push(stepImageUrl);
           
           // Update UI to show current step result
@@ -137,7 +137,7 @@ export default function TryOnWorkspace({
           // Auto-navigate to the latest generated step
           setCurrentViewingStep(stepResults.length - 1);
           
-          // Create file from base64 for next step
+          // Create file from filesystem URL for next step
           if (i < fashionItems.length - 1) {
             const response = await fetch(stepImageUrl);
             const blob = await response.blob();
