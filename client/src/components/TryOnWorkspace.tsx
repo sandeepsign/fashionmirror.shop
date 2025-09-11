@@ -263,7 +263,7 @@ export default function TryOnWorkspace({
           {/* Original Photo */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-foreground text-center">Original Photo</h3>
-            <div className="aspect-[3/4] bg-muted rounded-xl flex items-center justify-center">
+            <div className="h-[500px] bg-muted rounded-xl flex items-center justify-center">
               {modelImageUrl ? (
                 <img 
                   src={modelImageUrl} 
@@ -287,38 +287,7 @@ export default function TryOnWorkspace({
             <h3 className="text-lg font-medium text-foreground text-center">
               {isGenerating ? "AI Processing" : showStatusView ? "Generation Complete" : "Fashion Items"}
             </h3>
-            <div className="space-y-4">
-              {/* Creative Instructions - Optional Field */}
-              <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <i className="fas fa-palette text-accent"></i>
-                  <h4 className="text-sm font-medium text-foreground">Additional Creative Control</h4>
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">Optional</span>
-                </div>
-                <div className="relative">
-                  <textarea
-                    value={textPrompt}
-                    onChange={(e) => setTextPrompt(e.target.value)}
-                    placeholder="e.g. Change pose to casual sitting, add elegant studio lighting, outdoor background..."
-                    className="w-full p-3 border border-border/50 rounded-lg bg-background/50 text-foreground placeholder:text-muted-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-                    rows={2}
-                    maxLength={500}
-                    data-testid="textarea-text-prompt"
-                  />
-                  <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-                    {textPrompt.length}/500
-                  </div>
-                </div>
-                {textPrompt && (
-                  <div className="flex items-center text-xs text-accent/80 mt-2">
-                    <i className="fas fa-magic mr-1"></i>
-                    Creative instructions will guide the AI generation
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="aspect-[3/4] bg-muted rounded-xl flex items-center justify-center relative">
+            <div className="h-[500px] bg-muted rounded-xl flex flex-col relative">
               {isGenerating || showStatusView ? (
                 <div className="space-y-4 p-4 h-full">
                   {/* Header */}
@@ -452,50 +421,114 @@ export default function TryOnWorkspace({
                   </div>
                 </div>
               ) : allFashionItems.length > 0 ? (
-                <div className="p-4 h-full overflow-y-auto space-y-2">
-                  {allFashionItems.map((item, index) => (
-                    <div 
-                      key={index} 
-                      className="fashion-item-row flex items-center gap-3 p-3 bg-white rounded-lg border border-border hover:bg-muted cursor-pointer transition-all duration-200 group"
-                      onClick={() => onItemRemove(index)}
-                      data-testid={`row-fashion-item-${index}`}
-                    >
-                      <img 
-                        src={item.source === 'upload' ? 
-                          URL.createObjectURL(item.image) : 
-                          item.source === 'collection' && selectedFashionItems[index] ? 
-                            selectedFashionItems[index].imageUrl : 
-                            '/placeholder-fashion.jpg'
-                        } 
-                        alt={item.name} 
-                        className="w-12 h-12 object-cover rounded-md flex-shrink-0"
-                        data-testid={`img-fashion-item-${index}`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-foreground text-sm truncate group-hover:text-primary">
-                          {item.name}
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          {item.category}
-                        </p>
+                <div className="flex flex-col h-full">
+                  <div className="flex-1 p-4 overflow-y-auto space-y-2">
+                    {allFashionItems.map((item, index) => (
+                      <div 
+                        key={index} 
+                        className="fashion-item-row flex items-center gap-3 p-3 bg-white rounded-lg border border-border hover:bg-muted cursor-pointer transition-all duration-200 group"
+                        onClick={() => onItemRemove(index)}
+                        data-testid={`row-fashion-item-${index}`}
+                      >
+                        <img 
+                          src={item.source === 'upload' ? 
+                            URL.createObjectURL(item.image) : 
+                            item.source === 'collection' && selectedFashionItems[index] ? 
+                              selectedFashionItems[index].imageUrl : 
+                              '/placeholder-fashion.jpg'
+                          } 
+                          alt={item.name} 
+                          className="w-12 h-12 object-cover rounded-md flex-shrink-0"
+                          data-testid={`img-fashion-item-${index}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-foreground text-sm truncate group-hover:text-primary">
+                            {item.name}
+                          </h4>
+                          <p className="text-xs text-muted-foreground">
+                            {item.category}
+                          </p>
+                        </div>
+                        <div className="flex items-center text-muted-foreground group-hover:text-destructive">
+                          <i className="fas fa-times text-sm"></i>
+                        </div>
                       </div>
-                      <div className="flex items-center text-muted-foreground group-hover:text-destructive">
-                        <i className="fas fa-times text-sm"></i>
-                      </div>
+                    ))}
+                    <div className="text-center py-2">
+                      <p className="text-xs text-muted-foreground">
+                        Click any item to remove it from the selection
+                      </p>
                     </div>
-                  ))}
-                  <div className="text-center py-2">
-                    <p className="text-xs text-muted-foreground">
-                      Click any item to remove it from the selection
-                    </p>
+                  </div>
+                  
+                  {/* Creative Instructions - Optional Field */}
+                  <div className="border-t border-border/20 p-4">
+                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <i className="fas fa-palette text-accent"></i>
+                        <h4 className="text-sm font-medium text-foreground">Additional Creative Control</h4>
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">Optional</span>
+                      </div>
+                      <div className="relative">
+                        <textarea
+                          value={textPrompt}
+                          onChange={(e) => setTextPrompt(e.target.value)}
+                          placeholder="e.g. Change pose to casual sitting, add elegant studio lighting, outdoor background..."
+                          className="w-full p-3 border border-border/50 rounded-lg bg-background/50 text-foreground placeholder:text-muted-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                          rows={2}
+                          maxLength={500}
+                          data-testid="textarea-text-prompt"
+                        />
+                        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                          {textPrompt.length}/500
+                        </div>
+                      </div>
+                      {textPrompt && (
+                        <div className="flex items-center text-xs text-accent/80 mt-2">
+                          <i className="fas fa-magic mr-1"></i>
+                          Creative instructions will guide the AI generation
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center space-y-2">
+                <div className="flex flex-col h-full items-center justify-center space-y-2">
                   <i className="fas fa-tshirt text-muted-foreground text-4xl"></i>
                   <p className="text-sm text-muted-foreground" data-testid="text-no-fashion">
                     Select fashion items
                   </p>
+                  
+                  {/* Creative Instructions - Optional Field (empty state) */}
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <i className="fas fa-palette text-accent"></i>
+                        <h4 className="text-sm font-medium text-foreground">Additional Creative Control</h4>
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">Optional</span>
+                      </div>
+                      <div className="relative">
+                        <textarea
+                          value={textPrompt}
+                          onChange={(e) => setTextPrompt(e.target.value)}
+                          placeholder="e.g. Change pose to casual sitting, add elegant studio lighting, outdoor background..."
+                          className="w-full p-3 border border-border/50 rounded-lg bg-background/50 text-foreground placeholder:text-muted-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                          rows={2}
+                          maxLength={500}
+                          data-testid="textarea-text-prompt"
+                        />
+                        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                          {textPrompt.length}/500
+                        </div>
+                      </div>
+                      {textPrompt && (
+                        <div className="flex items-center text-xs text-accent/80 mt-2">
+                          <i className="fas fa-magic mr-1"></i>
+                          Creative instructions will guide the AI generation
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -509,7 +542,7 @@ export default function TryOnWorkspace({
             
             <div className="relative">
               {/* Single Image Display */}
-              <div className="aspect-[3/4] bg-muted rounded-xl flex items-center justify-center">
+              <div className="h-[500px] bg-muted rounded-xl flex items-center justify-center">
                 {resultImageUrls.length > 0 ? (
                   <div className="relative w-full h-full">
                     <img 
