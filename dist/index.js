@@ -2588,6 +2588,22 @@ function serveStatic(app2) {
 var app = express2();
 app.use(express2.json());
 app.use(express2.urlencoded({ extended: false }));
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    service: "FashionMirror API"
+  });
+});
+app.head("/", (_req, res) => {
+  res.status(200).end();
+});
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    message: "FashionMirror API is running",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
 var PgSession = connectPgSimple(session);
 app.use(session({
   store: new PgSession({
