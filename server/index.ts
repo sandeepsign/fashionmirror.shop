@@ -47,16 +47,9 @@ app.get("/api", (_req, res) => {
   });
 });
 
-// Root health check endpoint for deployment health checks
+// Root health check endpoint for deployment health checks (HEAD only)
 app.head("/", (_req, res) => {
   res.status(200).end();
-});
-
-app.get("/", (_req, res) => {
-  res.status(200).json({ 
-    message: "FashionMirror API is running",
-    timestamp: new Date().toISOString()
-  });
 });
 
 // Track session initialization status
