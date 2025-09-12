@@ -11,8 +11,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Health check endpoints - must be before session middleware
-// Simple health check for deployment health checks
+// Health check endpoints - lightweight and fast, no database dependencies
 app.get("/health", (_req, res) => {
   res.status(200).json({ 
     status: "healthy", 
@@ -21,7 +20,7 @@ app.get("/health", (_req, res) => {
   });
 });
 
-// Root health check endpoint
+// Root health check endpoint for deployment health checks
 app.head("/", (_req, res) => {
   res.status(200).end();
 });
@@ -33,27 +32,40 @@ app.get("/", (_req, res) => {
   });
 });
 
-// Setup session management with PostgreSQL store
-const PgSession = connectPgSimple(session);
-app.use(session({
-  store: new PgSession({
-    conObject: {
-      connectionString: process.env.DATABASE_URL,
-    },
-    tableName: 'session',
-    createTableIfMissing: true,
-  }),
-  secret: process.env.SESSION_SECRET || 'development-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // Allow non-HTTPS in Replit deployment
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    sameSite: 'lax', // Less restrictive for deployment compatibility
-  },
-  name: 'fashionmirror.sid',
-}));
+// Setup session management function - to be called after basic server startup
+async function setupSessionMiddleware() {
+  try {
+    const PgSession = connectPgSimple(session);
+    
+    const sessionMiddleware = session({
+      store: new PgSession({
+        conObject: {
+          connectionString: process.env.DATABASE_URL,
+        },
+        tableName: 'session',
+        createTableIfMissing: true,
+      }),
+      secret: process.env.SESSION_SECRET || 'development-secret-change-in-production',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: false, // Allow non-HTTPS in Replit deployment
+        httpOnly: true,
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        sameSite: 'lax', // Less restrictive for deployment compatibility
+      },
+      name: 'fashionmirror.sid',
+    });
+
+    app.use(sessionMiddleware);
+    log("Session middleware initialized successfully");
+    return true;
+  } catch (error) {
+    log(`Warning: Failed to initialize session middleware: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Continue without sessions in case of database issues
+    return false;
+  }
+}
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -86,6 +98,19 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Start the server first to respond to health checks quickly
+  const port = parseInt(process.env.PORT || '5000', 10);
+  const server = app.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`server started on port ${port} - health checks ready`);
+  });
+
+  // Now initialize database-dependent features after server is listening
+  await setupSessionMiddleware();
+
   // Setup static serving for public media files
   const mediaRoot = process.env.MEDIA_ROOT || path.join(process.cwd(), 'uploads');
   app.use('/media/public', express.static(path.join(mediaRoot, 'public'), {
@@ -97,9 +122,20 @@ app.use((req, res, next) => {
   }));
 
   // Register media routes for protected content
-  registerMediaRoutes(app);
+  try {
+    registerMediaRoutes(app);
+    log("Media routes registered successfully");
+  } catch (error) {
+    log(`Warning: Failed to register media routes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 
-  const server = await registerRoutes(app);
+  // Register main application routes
+  try {
+    await registerRoutes(app);
+    log("Application routes registered successfully");
+  } catch (error) {
+    log(`Warning: Failed to register application routes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -118,16 +154,5 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  log(`FashionMirror server fully initialized on port ${port}`);
 })();
