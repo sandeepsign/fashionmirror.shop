@@ -20,6 +20,33 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// API health check endpoint - for deployment health checks using /api path
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({ 
+    status: "healthy", 
+    timestamp: new Date().toISOString(),
+    service: "FashionMirror API"
+  });
+});
+
+app.head("/api/health", (_req, res) => {
+  res.status(200).end();
+});
+
+// Catch-all API health check for HEAD requests to /api
+app.head("/api", (_req, res) => {
+  res.status(200).end();
+});
+
+// Catch-all API health check for GET requests to /api
+app.get("/api", (_req, res) => {
+  res.status(200).json({ 
+    status: "healthy", 
+    timestamp: new Date().toISOString(),
+    service: "FashionMirror API"
+  });
+});
+
 // Root health check endpoint for deployment health checks
 app.head("/", (_req, res) => {
   res.status(200).end();
@@ -31,6 +58,9 @@ app.get("/", (_req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Track session initialization status
+let sessionInitialized = false;
 
 // Setup session management function - to be called after basic server startup
 async function setupSessionMiddleware() {
@@ -58,11 +88,13 @@ async function setupSessionMiddleware() {
     });
 
     app.use(sessionMiddleware);
+    sessionInitialized = true;
     log("Session middleware initialized successfully");
     return true;
   } catch (error) {
     log(`Warning: Failed to initialize session middleware: ${error instanceof Error ? error.message : 'Unknown error'}`);
     // Continue without sessions in case of database issues
+    sessionInitialized = false;
     return false;
   }
 }
@@ -142,7 +174,8 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    log(`Error ${status}: ${message}`);
+    // Don't throw err - this would crash the process after responding
   });
 
   // importantly only setup vite in development and after
