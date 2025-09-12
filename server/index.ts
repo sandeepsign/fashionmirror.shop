@@ -11,6 +11,28 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Health check endpoints - must be before session middleware
+// Simple health check for deployment health checks
+app.get("/health", (_req, res) => {
+  res.status(200).json({ 
+    status: "healthy", 
+    timestamp: new Date().toISOString(),
+    service: "FashionMirror API"
+  });
+});
+
+// Root health check endpoint
+app.head("/", (_req, res) => {
+  res.status(200).end();
+});
+
+app.get("/", (_req, res) => {
+  res.status(200).json({ 
+    message: "FashionMirror API is running",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Setup session management with PostgreSQL store
 const PgSession = connectPgSimple(session);
 app.use(session({
