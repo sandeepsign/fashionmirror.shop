@@ -42,64 +42,98 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
     }
   };
 
-  const handleFileSelect = async (files: FileList) => {
-    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-    if (imageFiles.length > 0) {
-      onImagesSelect(imageFiles);
-      const urls = imageFiles.map(file => URL.createObjectURL(file));
-      setPreviewUrls(urls);
-      
-      // Initialize arrays for the new files
-      const initialNames = imageFiles.map(file => file.name.split('.')[0]);
-      const initialCategories = imageFiles.map(() => 'Analyzing...');
-      const analyzingStates = imageFiles.map(() => true);
-      
-      setItemNames(initialNames);
-      setItemCategories(initialCategories);
-      setAnalyzingItems(analyzingStates);
-      
-      // Analyze each image with AI
-      imageFiles.forEach(async (file, index) => {
-        try {
-          const analysis = await apiClient.analyzeFashionImage(file);
-          
-          // Update the specific item's data
-          setItemNames(prev => {
-            const newNames = [...prev];
-            newNames[index] = analysis.name;
-            return newNames;
-          });
-          
-          setItemCategories(prev => {
-            const newCategories = [...prev];
-            newCategories[index] = analysis.category;
-            return newCategories;
-          });
-          
-          setAnalyzingItems(prev => {
-            const newAnalyzing = [...prev];
-            newAnalyzing[index] = false;
-            return newAnalyzing;
-          });
-          
-        } catch (error) {
-          console.error('Failed to analyze image:', error);
-          
-          // Set fallback values on error
-          setItemCategories(prev => {
-            const newCategories = [...prev];
-            newCategories[index] = 'Fashion Item';
-            return newCategories;
-          });
-          
-          setAnalyzingItems(prev => {
-            const newAnalyzing = [...prev];
-            newAnalyzing[index] = false;
-            return newAnalyzing;
-          });
-        }
+  // Unified function to add images from any source (file selection, paste, drag & drop)
+  const addImages = useCallback(async (newFiles: File[]) => {
+    const imageFiles = Array.from(newFiles).filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length === 0) {
+      toast({
+        title: "No images found",
+        description: "Please select or paste valid image files",
+        variant: "destructive"
       });
+      return;
     }
+
+    // Add to existing images
+    const existingFiles = selectedImages || [];
+    const allFiles = [...existingFiles, ...imageFiles];
+    const startIndex = existingFiles.length;
+    
+    // Update all states
+    onImagesSelect(allFiles);
+    
+    // Add new preview URLs
+    const existingUrls = previewUrls || [];
+    const newUrls = imageFiles.map(file => URL.createObjectURL(file));
+    setPreviewUrls([...existingUrls, ...newUrls]);
+    
+    // Add initial names and categories
+    const existingNames = itemNames || [];
+    const newNames = imageFiles.map(file => file.name.split('.')[0]);
+    setItemNames([...existingNames, ...newNames]);
+    
+    const existingCategories = itemCategories || [];
+    const newCategories = imageFiles.map(() => 'Analyzing...');
+    setItemCategories([...existingCategories, ...newCategories]);
+    
+    const existingAnalyzing = analyzingItems || [];
+    const newAnalyzing = imageFiles.map(() => true);
+    setAnalyzingItems([...existingAnalyzing, ...newAnalyzing]);
+    
+    // Show success toast
+    toast({
+      title: "Images added!",
+      description: `Added ${imageFiles.length} fashion item${imageFiles.length > 1 ? 's' : ''} for analysis`,
+    });
+    
+    // Analyze each new image with AI
+    imageFiles.forEach(async (file, relativeIndex) => {
+      const absoluteIndex = startIndex + relativeIndex;
+      
+      try {
+        const analysis = await apiClient.analyzeFashionImage(file);
+        
+        // Update the specific item's data
+        setItemNames(prev => {
+          const newNames = [...prev];
+          newNames[absoluteIndex] = analysis.name;
+          return newNames;
+        });
+        
+        setItemCategories(prev => {
+          const newCategories = [...prev];
+          newCategories[absoluteIndex] = analysis.category;
+          return newCategories;
+        });
+        
+        setAnalyzingItems(prev => {
+          const newAnalyzing = [...prev];
+          newAnalyzing[absoluteIndex] = false;
+          return newAnalyzing;
+        });
+        
+      } catch (error) {
+        console.error('Failed to analyze image:', error);
+        
+        // Set fallback values on error
+        setItemCategories(prev => {
+          const newCategories = [...prev];
+          newCategories[absoluteIndex] = 'Fashion Item';
+          return newCategories;
+        });
+        
+        setAnalyzingItems(prev => {
+          const newAnalyzing = [...prev];
+          newAnalyzing[absoluteIndex] = false;
+          return newAnalyzing;
+        });
+      }
+    });
+  }, [selectedImages, previewUrls, itemNames, itemCategories, analyzingItems, onImagesSelect, toast]);
+
+  const handleFileSelect = async (files: FileList) => {
+    await addImages(Array.from(files));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,111 +198,38 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
     }
   };
 
-  // Simple paste functionality that works reliably
-  const processPastedImages = useCallback((imageFiles: File[]) => {
-    if (imageFiles.length > 0) {
-      // Add to existing images
-      const existingFiles = selectedImages || [];
-      const allFiles = [...existingFiles, ...imageFiles];
-      
-      onImagesSelect(allFiles);
-      
-      // Update preview URLs
-      const existingUrls = previewUrls || [];
-      const newUrls = imageFiles.map(file => URL.createObjectURL(file));
-      setPreviewUrls([...existingUrls, ...newUrls]);
-      
-      // Update item names
-      const existingNames = itemNames || [];
-      const newNames = imageFiles.map(file => file.name.split('.')[0]);
-      setItemNames([...existingNames, ...newNames]);
-      
-      toast({
-        title: "Fashion item pasted!",
-        description: `Added ${imageFiles.length} fashion item${imageFiles.length > 1 ? 's' : ''} from clipboard`,
-      });
-      return true;
-    } else {
-      toast({
-        title: "No image found",
-        description: "Please copy an image to your clipboard first",
-        variant: "destructive"
-      });
-      return false;
-    }
-  }, [selectedImages, previewUrls, itemNames, onImagesSelect, toast, setPreviewUrls, setItemNames]);
+  // State for paste UI feedback
+  const [showPastePrompt, setShowPastePrompt] = useState(false);
+  const pasteAreaRef = useRef<HTMLDivElement>(null);
 
-  // Create a hidden input to trigger paste
-  const triggerPaste = useCallback(() => {
-    // Create a temporary textarea to capture paste
-    const tempInput = document.createElement('textarea');
-    tempInput.style.position = 'fixed';
-    tempInput.style.left = '-9999px';
-    tempInput.style.top = '-9999px';
-    tempInput.setAttribute('readonly', 'readonly');
-    document.body.appendChild(tempInput);
-    
-    // Focus the input and trigger paste
-    tempInput.focus();
-    tempInput.select();
-    
-    // Listen for paste event on this temporary input
-    const handleTempPaste = (e: Event) => {
-      const pasteEvent = e as ClipboardEvent;
-      e.preventDefault();
-      
-      const items = pasteEvent.clipboardData?.items;
-      if (!items) {
-        toast({
-          title: "Paste failed",
-          description: "Please copy an image first, then try again",
-          variant: "destructive"
-        });
-        cleanup();
-        return;
-      }
-
-      const imageFiles: File[] = [];
-      
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        
-        if (item.type.startsWith('image/')) {
-          const file = item.getAsFile();
-          if (file) {
-            const timestamp = Date.now();
-            const extension = item.type.split('/')[1] || 'png';
-            const pastedFile = new File([file], `pasted-fashion-${timestamp}.${extension}`, {
-              type: item.type
-            });
-            imageFiles.push(pastedFile);
-          }
-        }
-      }
-      
-      processPastedImages(imageFiles);
-      cleanup();
-    };
-    
-    const cleanup = () => {
-      tempInput.removeEventListener('paste', handleTempPaste);
-      document.body.removeChild(tempInput);
-    };
-    
-    tempInput.addEventListener('paste', handleTempPaste);
-    
-    // Trigger paste command
+  // Handle paste button click - show focused paste area
+  const handlePasteButton = useCallback(() => {
+    setShowPastePrompt(true);
+    // Focus the paste area so Ctrl+V works
     setTimeout(() => {
-      document.execCommand('paste');
-      // Fallback cleanup if paste doesn't trigger
-      setTimeout(cleanup, 1000);
+      pasteAreaRef.current?.focus();
     }, 100);
-  }, [processPastedImages, toast]);
+    
+    // Auto-hide after 10 seconds if no paste occurs
+    setTimeout(() => {
+      setShowPastePrompt(false);
+    }, 10000);
+  }, []);
 
-  const handlePasteButton = triggerPaste;
+  // Handle paste events (from Ctrl+V or right-click paste)
+  const handlePaste = useCallback((e: ClipboardEvent) => {
+    // Check if we're in a text input - if so, don't interfere
+    const activeElement = document.activeElement as HTMLElement;
+    if (activeElement && (
+      activeElement.tagName === 'INPUT' || 
+      activeElement.tagName === 'TEXTAREA' ||
+      activeElement.contentEditable === 'true'
+    ) && activeElement !== pasteAreaRef.current) {
+      return; // Let normal text paste work
+    }
 
-  const handlePaste = (e: ClipboardEvent) => {
     e.preventDefault();
+    setShowPastePrompt(false); // Hide prompt once paste is attempted
     
     const items = e.clipboardData?.items;
     if (!items) {
@@ -298,38 +259,65 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
       }
     }
     
-    processPastedImages(imageFiles);
-  };
+    if (imageFiles.length > 0) {
+      addImages(imageFiles);
+    } else {
+      toast({
+        title: "No image found",
+        description: "Please copy an image to your clipboard first",
+        variant: "destructive"
+      });
+    }
+  }, [addImages, toast]);
 
-  // Set up paste event listener
+  // Set up component-scoped paste event listener
+  const uploadContainerRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Ctrl+V or Cmd+V
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-        // Only handle paste if we're not in an input field
-        const activeElement = document.activeElement;
-        if (activeElement?.tagName !== 'INPUT' && activeElement?.tagName !== 'TEXTAREA') {
-          e.preventDefault();
-          // The paste event will handle the actual pasting
-        }
-      }
-    };
+    const uploadContainer = uploadContainerRef.current;
+    if (!uploadContainer) return;
 
-    document.addEventListener('paste', handlePaste);
-    document.addEventListener('keydown', handleKeyDown);
+    // Add paste listener to the upload container
+    uploadContainer.addEventListener('paste', handlePaste);
     
     return () => {
-      document.removeEventListener('paste', handlePaste);
-      document.removeEventListener('keydown', handleKeyDown);
+      uploadContainer.removeEventListener('paste', handlePaste);
     };
-  }, [handlePaste]); // Simplified dependencies
+  }, [handlePaste]);
 
   return (
-    <div className="space-y-6">
+    <div ref={uploadContainerRef} className="space-y-6" tabIndex={0}>
       <div className="text-center">
         <h2 className="text-2xl font-serif font-semibold text-foreground mb-2">Choose Fashion Item</h2>
         <p className="text-muted-foreground">Upload a garment or accessory to try on</p>
       </div>
+      
+      {/* Paste prompt overlay */}
+      {showPastePrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div 
+            ref={pasteAreaRef}
+            className="bg-background border border-accent rounded-lg p-8 text-center max-w-md mx-4"
+            tabIndex={0}
+          >
+            <div className="space-y-4">
+              <div className="text-2xl">📋</div>
+              <h3 className="text-lg font-semibold">Paste Your Image</h3>
+              <p className="text-muted-foreground">
+                Press <kbd className="px-2 py-1 bg-muted rounded text-sm">Ctrl+V</kbd> or{' '}
+                <kbd className="px-2 py-1 bg-muted rounded text-sm">Cmd+V</kbd> to paste your image
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowPastePrompt(false)}
+                className="mt-4"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {previewUrls.length === 0 ? (
         <div
