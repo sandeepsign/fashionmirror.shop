@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -164,7 +164,7 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
     }
   };
 
-  const handlePasteButton = async () => {
+  const handlePasteButton = useCallback(async () => {
     try {
       // First try to request clipboard permissions
       const permission = await navigator.permissions.query({name: 'clipboard-read' as PermissionName});
@@ -234,7 +234,7 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
         description: "Copy an image and press Ctrl+V (or Cmd+V on Mac) to paste",
       });
     }
-  };
+  }, [selectedImages, previewUrls, itemNames, onImagesSelect, toast, setPreviewUrls, setItemNames]);
 
   const handlePaste = async (e: ClipboardEvent) => {
     e.preventDefault();
@@ -294,13 +294,15 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
 
   // Set up paste event listener
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       // Check for Ctrl+V or Cmd+V
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         // Only handle paste if we're not in an input field
         const activeElement = document.activeElement;
         if (activeElement?.tagName !== 'INPUT' && activeElement?.tagName !== 'TEXTAREA') {
           e.preventDefault();
+          // Trigger the paste functionality
+          await handlePasteButton();
         }
       }
     };
@@ -312,7 +314,7 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
       document.removeEventListener('paste', handlePaste);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedImages, previewUrls, itemNames]); // Dependencies for the paste handler
+  }, [selectedImages, previewUrls, itemNames, handlePasteButton]); // Added handlePasteButton to dependencies
 
   return (
     <div className="space-y-6">
