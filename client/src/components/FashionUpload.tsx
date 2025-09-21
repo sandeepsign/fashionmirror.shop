@@ -164,106 +164,10 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
     }
   };
 
-  const handlePasteButton = useCallback(async () => {
-    try {
-      // First try to request clipboard permissions
-      const permission = await navigator.permissions.query({name: 'clipboard-read' as PermissionName});
-      
-      if (permission.state === 'denied') {
-        toast({
-          title: "Clipboard access denied",
-          description: "Copy an image and use Ctrl+V to paste instead",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Try to read from clipboard
-      if (!navigator.clipboard?.read) {
-        throw new Error('Clipboard API not supported');
-      }
-      
-      const clipboardData = await navigator.clipboard.read();
-      const imageFiles: File[] = [];
-      
-      for (const item of clipboardData) {
-        for (const type of item.types) {
-          if (type.startsWith('image/')) {
-            const blob = await item.getType(type);
-            const timestamp = Date.now();
-            const extension = type.split('/')[1] || 'png';
-            const file = new File([blob], `pasted-fashion-${timestamp}.${extension}`, {
-              type: type
-            });
-            imageFiles.push(file);
-          }
-        }
-      }
-      
-      if (imageFiles.length > 0) {
-        // Add to existing images
-        const existingFiles = selectedImages || [];
-        const allFiles = [...existingFiles, ...imageFiles];
-        
-        onImagesSelect(allFiles);
-        
-        // Update preview URLs
-        const existingUrls = previewUrls || [];
-        const newUrls = imageFiles.map(file => URL.createObjectURL(file));
-        setPreviewUrls([...existingUrls, ...newUrls]);
-        
-        // Update item names
-        const existingNames = itemNames || [];
-        const newNames = imageFiles.map(file => file.name.split('.')[0]);
-        setItemNames([...existingNames, ...newNames]);
-        
-        toast({
-          title: "Fashion item pasted!",
-          description: `Added ${imageFiles.length} fashion item${imageFiles.length > 1 ? 's' : ''} from clipboard`,
-        });
-      } else {
-        toast({
-          title: "No image found",
-          description: "Please copy an image to your clipboard first",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Use Ctrl+V instead",
-        description: "Copy an image and press Ctrl+V (or Cmd+V on Mac) to paste",
-      });
-    }
-  }, [selectedImages, previewUrls, itemNames, onImagesSelect, toast, setPreviewUrls, setItemNames]);
-
-  const handlePaste = async (e: ClipboardEvent) => {
-    e.preventDefault();
-    
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    const imageFiles: File[] = [];
-    
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      
-      // Check if the item is an image
-      if (item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        if (file) {
-          // Create a proper filename for the pasted image
-          const timestamp = Date.now();
-          const extension = item.type.split('/')[1] || 'png';
-          const pastedFile = new File([file], `pasted-fashion-${timestamp}.${extension}`, {
-            type: item.type
-          });
-          imageFiles.push(pastedFile);
-        }
-      }
-    }
-    
+  // Simple paste functionality that works reliably
+  const processPastedImages = useCallback((imageFiles: File[]) => {
     if (imageFiles.length > 0) {
-      // Add to existing images instead of replacing
+      // Add to existing images
       const existingFiles = selectedImages || [];
       const allFiles = [...existingFiles, ...imageFiles];
       
@@ -283,26 +187,130 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
         title: "Fashion item pasted!",
         description: `Added ${imageFiles.length} fashion item${imageFiles.length > 1 ? 's' : ''} from clipboard`,
       });
+      return true;
     } else {
       toast({
         title: "No image found",
         description: "Please copy an image to your clipboard first",
         variant: "destructive"
       });
+      return false;
     }
+  }, [selectedImages, previewUrls, itemNames, onImagesSelect, toast, setPreviewUrls, setItemNames]);
+
+  // Create a hidden input to trigger paste
+  const triggerPaste = useCallback(() => {
+    // Create a temporary textarea to capture paste
+    const tempInput = document.createElement('textarea');
+    tempInput.style.position = 'fixed';
+    tempInput.style.left = '-9999px';
+    tempInput.style.top = '-9999px';
+    tempInput.setAttribute('readonly', 'readonly');
+    document.body.appendChild(tempInput);
+    
+    // Focus the input and trigger paste
+    tempInput.focus();
+    tempInput.select();
+    
+    // Listen for paste event on this temporary input
+    const handleTempPaste = (e: Event) => {
+      const pasteEvent = e as ClipboardEvent;
+      e.preventDefault();
+      
+      const items = pasteEvent.clipboardData?.items;
+      if (!items) {
+        toast({
+          title: "Paste failed",
+          description: "Please copy an image first, then try again",
+          variant: "destructive"
+        });
+        cleanup();
+        return;
+      }
+
+      const imageFiles: File[] = [];
+      
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            const timestamp = Date.now();
+            const extension = item.type.split('/')[1] || 'png';
+            const pastedFile = new File([file], `pasted-fashion-${timestamp}.${extension}`, {
+              type: item.type
+            });
+            imageFiles.push(pastedFile);
+          }
+        }
+      }
+      
+      processPastedImages(imageFiles);
+      cleanup();
+    };
+    
+    const cleanup = () => {
+      tempInput.removeEventListener('paste', handleTempPaste);
+      document.body.removeChild(tempInput);
+    };
+    
+    tempInput.addEventListener('paste', handleTempPaste);
+    
+    // Trigger paste command
+    setTimeout(() => {
+      document.execCommand('paste');
+      // Fallback cleanup if paste doesn't trigger
+      setTimeout(cleanup, 1000);
+    }, 100);
+  }, [processPastedImages, toast]);
+
+  const handlePasteButton = triggerPaste;
+
+  const handlePaste = (e: ClipboardEvent) => {
+    e.preventDefault();
+    
+    const items = e.clipboardData?.items;
+    if (!items) {
+      toast({
+        title: "Paste failed",
+        description: "Please copy an image first, then try again",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const imageFiles: File[] = [];
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          const timestamp = Date.now();
+          const extension = item.type.split('/')[1] || 'png';
+          const pastedFile = new File([file], `pasted-fashion-${timestamp}.${extension}`, {
+            type: item.type
+          });
+          imageFiles.push(pastedFile);
+        }
+      }
+    }
+    
+    processPastedImages(imageFiles);
   };
 
   // Set up paste event listener
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       // Check for Ctrl+V or Cmd+V
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         // Only handle paste if we're not in an input field
         const activeElement = document.activeElement;
         if (activeElement?.tagName !== 'INPUT' && activeElement?.tagName !== 'TEXTAREA') {
           e.preventDefault();
-          // Trigger the paste functionality
-          await handlePasteButton();
+          // The paste event will handle the actual pasting
         }
       }
     };
@@ -314,7 +322,7 @@ export default function FashionUpload({ onImagesSelect, selectedImages, onBrowse
       document.removeEventListener('paste', handlePaste);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedImages, previewUrls, itemNames, handlePasteButton]); // Added handlePasteButton to dependencies
+  }, [handlePaste]); // Simplified dependencies
 
   return (
     <div className="space-y-6">
