@@ -185,7 +185,7 @@ export async function generateVirtualTryOn({
     // First test if the API key works with a simple text model
     try {
       const testResponse = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         contents: ["Hello, are you working?"],
       });
       console.log("API key test successful");
@@ -312,7 +312,7 @@ export async function generateSimultaneousTryOn({
     // Test API key first
     try {
       const testResponse = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         contents: ["Hello, are you working?"],
       });
       console.log("API key test successful for simultaneous try-on");
@@ -503,7 +503,7 @@ export async function generateProgressiveTryOn({
       // Test API key for each step
       try {
         const testResponse = await ai.models.generateContent({
-          model: "gemini-1.5-flash",
+          model: "gemini-2.0-flash",
           contents: ["Hello, are you working?"],
         });
         console.log(`API key test successful for progressive step ${stepNumber}`);
