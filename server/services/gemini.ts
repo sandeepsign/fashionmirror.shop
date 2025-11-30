@@ -232,7 +232,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
 
     // Try with the correct API structure
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image-preview",
+      model: "gemini-3-pro-image-preview",
       contents: [{
         parts: [
           { text: prompt },
@@ -399,7 +399,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
     });
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image-preview",
+      model: "gemini-3-pro-image-preview",
       contents: [{
         parts
       }]
@@ -553,7 +553,7 @@ VERIFICATION CHECK: If the result shows a different person, hair color, or facia
 
       // Generate the step result
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-image-preview",
+        model: "gemini-3-pro-image-preview",
         contents: [{
           parts: [
             { text: prompt },
