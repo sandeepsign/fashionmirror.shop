@@ -34,16 +34,16 @@ export default function BackgroundAnimation() {
       constructor() {
         this.x = Math.random() * canvas!.width;
         this.y = Math.random() * canvas!.height;
-        this.size = Math.random() * 2 + 0.5; // Small, elegant particles
-        this.speedX = Math.random() * 0.5 - 0.25; // Slow drift
-        this.speedY = Math.random() * 0.5 - 0.25;
-        this.baseAlpha = Math.random() * 0.5 + 0.1;
+        this.size = Math.random() * 4 + 1; // Larger particles (was 2 + 0.5)
+        this.speedX = Math.random() * 0.8 - 0.4; // Slightly faster drift
+        this.speedY = Math.random() * 0.8 - 0.4;
+        this.baseAlpha = Math.random() * 0.7 + 0.3; // More visible (was 0.5 + 0.1)
         this.alpha = this.baseAlpha;
-        
-        // Mix of gold (accent) and white (primary)
-        this.color = Math.random() > 0.8 
-          ? '255, 215, 0' // Gold
-          : '255, 255, 255'; // White
+
+        // Mix of gold (accent) and white (primary) - more gold particles
+        this.color = Math.random() > 0.6
+          ? '255, 215, 0' // Gold (40% now)
+          : '255, 255, 255'; // White (60%)
       }
 
       update() {
@@ -56,31 +56,31 @@ export default function BackgroundAnimation() {
         if (this.y > canvas!.height) this.y = 0;
         if (this.y < 0) this.y = canvas!.height;
 
-        // Mouse interaction
+        // Mouse interaction - stronger effect
         const dx = mouseX - this.x;
         const dy = mouseY - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const maxDistance = 150;
+        const maxDistance = 200; // Larger interaction radius
 
         if (distance < maxDistance) {
           const forceDirectionX = dx / distance;
           const forceDirectionY = dy / distance;
           const force = (maxDistance - distance) / maxDistance;
-          
-          // Gentle push away
-          this.x -= forceDirectionX * force * 1; 
-          this.y -= forceDirectionY * force * 1;
 
-          // Glow effect
-          this.alpha = Math.min(this.baseAlpha + force * 0.5, 1);
-          this.size = Math.min(3, this.size + force);
+          // Stronger push away
+          this.x -= forceDirectionX * force * 3;
+          this.y -= forceDirectionY * force * 3;
+
+          // Stronger glow effect
+          this.alpha = Math.min(this.baseAlpha + force * 0.7, 1);
+          this.size = Math.min(8, this.size + force * 2);
         } else {
           // Return to normal
           if (this.alpha > this.baseAlpha) {
             this.alpha -= 0.02;
           }
-          if (this.size > 2) { // Reset size if it was enlarged
-             this.size -= 0.1;
+          if (this.size > 5) {
+            this.size -= 0.15;
           }
         }
       }
@@ -96,7 +96,7 @@ export default function BackgroundAnimation() {
 
     const init = () => {
       particles = [];
-      const numberOfParticles = (canvas.width * canvas.height) / 15000; // Density
+      const numberOfParticles = (canvas.width * canvas.height) / 8000; // Higher density (was 15000)
       for (let i = 0; i < numberOfParticles; i++) {
         particles.push(new Particle());
       }
@@ -141,34 +141,50 @@ export default function BackgroundAnimation() {
       {/* Deep Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background/90" />
 
-      {/* Moving Orbs (Ethereal Layer) */}
-      <div className="absolute inset-0 opacity-30">
+      {/* Moving Orbs (Ethereal Layer) - More prominent */}
+      <div className="absolute inset-0 opacity-60">
         <motion.div
           animate={{
-            x: [0, 100, 0],
-            y: [0, -50, 0],
-            scale: [1, 1.2, 1],
+            x: [0, 150, 0],
+            y: [0, -80, 0],
+            scale: [1, 1.3, 1],
           }}
           transition={{
-            duration: 20,
+            duration: 15,
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-primary/10 rounded-full blur-[100px]"
+          className="absolute top-[-20%] left-[-15%] w-[60vw] h-[60vw] bg-primary/20 rounded-full blur-[80px]"
         />
         <motion.div
           animate={{
-            x: [0, -100, 0],
-            y: [0, 100, 0],
-            scale: [1, 1.5, 1],
+            x: [0, -150, 0],
+            y: [0, 120, 0],
+            scale: [1, 1.6, 1],
           }}
           transition={{
-            duration: 25,
+            duration: 18,
             repeat: Infinity,
             ease: "easeInOut",
             delay: 2
           }}
-          className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-accent/5 rounded-full blur-[120px]"
+          className="absolute bottom-[-20%] right-[-15%] w-[70vw] h-[70vw] bg-accent/15 rounded-full blur-[100px]"
+        />
+        {/* Additional center orb */}
+        <motion.div
+          animate={{
+            x: [-50, 50, -50],
+            y: [-30, 30, -30],
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.6, 0.3],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+          className="absolute top-[30%] left-[30%] w-[40vw] h-[40vw] bg-primary/10 rounded-full blur-[60px]"
         />
       </div>
 
