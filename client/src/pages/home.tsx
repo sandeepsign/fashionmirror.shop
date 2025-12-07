@@ -5,13 +5,35 @@ import FashionUpload from "@/components/FashionUpload";
 import FashionCollection from "@/components/FashionCollection";
 import TryOnWorkspace from "@/components/TryOnWorkspace";
 import ResultsGallery from "@/components/ResultsGallery";
-import LoadingModal from "@/components/LoadingModal";
+import LandingPage from "@/components/LandingPage";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FashionItem, TryOnResult } from "@shared/schema";
 import { FashionItemInput } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
+  // Show landing page for logged-out users
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  // Logged-in users see the dashboard
+  return <Dashboard />;
+}
+
+function Dashboard() {
   const [modelImage, setModelImage] = useState<File | null>(null);
   const [fashionImages, setFashionImages] = useState<File[]>([]);
   const [selectedFashionItems, setSelectedFashionItems] = useState<FashionItem[]>([]);
