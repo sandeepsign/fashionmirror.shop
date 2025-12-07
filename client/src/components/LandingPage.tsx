@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/AuthModal";
 import { useAuth } from "@/contexts/AuthContext";
+import BackgroundAnimation from "./BackgroundAnimation";
 
 export default function LandingPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -14,9 +15,11 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      <BackgroundAnimation />
+
       {/* Navigation */}
-      <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav className="border-b border-border/40 bg-background/60 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
@@ -32,7 +35,7 @@ export default function LandingPage() {
                 Sign In
               </Button>
               <Button
-                className="bg-primary text-primary-foreground hover:opacity-90"
+                className="bg-primary text-primary-foreground hover:opacity-90 transition-all duration-300 shadow-[0_0_15px_rgba(255,255,255,0.3)] hover:shadow-[0_0_25px_rgba(255,255,255,0.5)]"
                 onClick={() => openAuth('register')}
               >
                 Get Started
@@ -43,22 +46,22 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/20"></div>
+      <section className="relative overflow-hidden z-10">
+        {/* Removed static gradient to show animation */}
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 tracking-tight">
+            <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 tracking-tight drop-shadow-lg">
               Try Before You Buy
-              <span className="block text-primary mt-2">Powered by AI</span>
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-primary/70 mt-2 animate-pulse">Powered by AI</span>
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-10 leading-relaxed max-w-2xl mx-auto">
+            <p className="text-xl md:text-2xl text-muted-foreground/90 mb-10 leading-relaxed max-w-2xl mx-auto">
               Upload your photo and see yourself in any outfit instantly.
               Our AI creates realistic virtual try-ons in seconds.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
-                className="bg-primary text-primary-foreground px-10 py-6 text-lg font-medium hover:opacity-90"
+                className="bg-primary text-primary-foreground px-10 py-6 text-lg font-medium hover:opacity-90 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] hover:scale-105"
                 onClick={() => openAuth('register')}
               >
                 Start Free Trial
@@ -66,7 +69,7 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="px-10 py-6 text-lg font-medium border-border"
+                className="px-10 py-6 text-lg font-medium border-primary/20 bg-background/30 backdrop-blur-sm hover:bg-background/50 transition-all duration-300"
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
               >
                 Learn More
@@ -77,8 +80,9 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="features" className="py-24 relative z-10">
+        <div className="absolute inset-0 bg-background/40 backdrop-blur-[2px]"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
               How It Works
@@ -90,8 +94,8 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Step 1 */}
-            <div className="bg-card border border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-card/40 backdrop-blur-md border border-white/5 rounded-xl p-8 text-center hover:border-primary/30 transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-2xl">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
                 <i className="fas fa-camera text-2xl text-primary"></i>
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-3">1. Upload Your Photo</h3>
@@ -101,8 +105,8 @@ export default function LandingPage() {
             </div>
 
             {/* Step 2 */}
-            <div className="bg-card border border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-card/40 backdrop-blur-md border border-white/5 rounded-xl p-8 text-center hover:border-primary/30 transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-2xl">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
                 <i className="fas fa-tshirt text-2xl text-primary"></i>
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-3">2. Choose Outfits</h3>
@@ -112,8 +116,8 @@ export default function LandingPage() {
             </div>
 
             {/* Step 3 */}
-            <div className="bg-card border border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-card/40 backdrop-blur-md border border-white/5 rounded-xl p-8 text-center hover:border-primary/30 transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-2xl">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
                 <i className="fas fa-magic text-2xl text-primary"></i>
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-3">3. See the Magic</h3>
@@ -126,7 +130,7 @@ export default function LandingPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-24">
+      <section className="py-24 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -134,8 +138,8 @@ export default function LandingPage() {
                 Shop Smarter, Not Harder
               </h2>
               <div className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                <div className="flex items-start space-x-4 group">
+                  <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-accent/30 transition-colors">
                     <i className="fas fa-check text-accent text-sm"></i>
                   </div>
                   <div>
@@ -143,8 +147,8 @@ export default function LandingPage() {
                     <p className="text-muted-foreground">See exactly how clothes look on you before purchasing. Reduce returns by up to 80%.</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                <div className="flex items-start space-x-4 group">
+                  <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-accent/30 transition-colors">
                     <i className="fas fa-check text-accent text-sm"></i>
                   </div>
                   <div>
@@ -152,8 +156,8 @@ export default function LandingPage() {
                     <p className="text-muted-foreground">Try dozens of outfits in minutes from the comfort of your home.</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                <div className="flex items-start space-x-4 group">
+                  <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-accent/30 transition-colors">
                     <i className="fas fa-check text-accent text-sm"></i>
                   </div>
                   <div>
@@ -161,8 +165,8 @@ export default function LandingPage() {
                     <p className="text-muted-foreground">Our AI understands body proportions to show realistic fits and draping.</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                <div className="flex items-start space-x-4 group">
+                  <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1 group-hover:bg-accent/30 transition-colors">
                     <i className="fas fa-check text-accent text-sm"></i>
                   </div>
                   <div>
@@ -173,9 +177,9 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="relative">
-              <div className="aspect-square bg-gradient-to-br from-muted to-muted/50 rounded-2xl flex items-center justify-center border border-border">
+              <div className="aspect-square bg-gradient-to-br from-muted/30 to-muted/10 rounded-2xl flex items-center justify-center border border-white/10 backdrop-blur-sm shadow-2xl">
                 <div className="text-center p-8">
-                  <i className="fas fa-wand-magic-sparkles text-6xl text-primary/50 mb-4"></i>
+                  <i className="fas fa-wand-magic-sparkles text-6xl text-primary/50 mb-4 animate-pulse"></i>
                   <p className="text-muted-foreground">AI-Powered Virtual Try-On</p>
                 </div>
               </div>
@@ -185,8 +189,9 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-muted/30">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="py-24 relative z-10">
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-6">
             Ready to Transform Your Shopping?
           </h2>
@@ -195,7 +200,7 @@ export default function LandingPage() {
           </p>
           <Button
             size="lg"
-            className="bg-primary text-primary-foreground px-12 py-6 text-lg font-medium hover:opacity-90"
+            className="bg-primary text-primary-foreground px-12 py-6 text-lg font-medium hover:opacity-90 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] hover:scale-105"
             onClick={() => openAuth('register')}
           >
             Create Free Account
@@ -207,7 +212,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-background py-12 border-t border-border">
+      <footer className="bg-background/80 backdrop-blur-md py-12 border-t border-border relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="space-y-4">
@@ -266,3 +271,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
