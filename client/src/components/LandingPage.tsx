@@ -1,24 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/AuthModal";
 import { useAuth } from "@/contexts/AuthContext";
 import BackgroundAnimation from "./BackgroundAnimation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export default function LandingPage() {
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
-    const [showFloatingNav, setShowFloatingNav] = useState(false);
     const { login } = useAuth();
-
-    // Show floating nav after scrolling past hero section
-    useEffect(() => {
-        const handleScroll = () => {
-            setShowFloatingNav(window.scrollY > 300);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
 
     const openAuth = (mode: 'login' | 'register') => {
         setAuthMode(mode);
@@ -47,41 +37,6 @@ export default function LandingPage() {
         <div className="min-h-screen relative overflow-x-hidden text-foreground">
             {/* Background Animation restored */}
             <BackgroundAnimation />
-
-            {/* Floating Navigation Pill - appears on scroll */}
-            <AnimatePresence>
-                {showFloatingNav && (
-                    <motion.nav
-                        initial={{ y: -100, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -100, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="fixed top-6 left-1/2 -translate-x-1/2 z-50"
-                    >
-                        <div className="flex items-center gap-3 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full px-4 py-2 shadow-2xl">
-                            <div className="flex items-center space-x-2 pr-3 border-r border-white/10">
-                                <i className="fas fa-tshirt text-primary text-lg"></i>
-                                <span className="text-lg font-serif font-bold text-foreground">FashionMirror</span>
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-muted-foreground hover:text-foreground text-sm rounded-full"
-                                onClick={() => openAuth('login')}
-                            >
-                                Sign In
-                            </Button>
-                            <Button
-                                size="sm"
-                                className="bg-primary text-primary-foreground hover:opacity-90 transition-all duration-300 rounded-full px-4"
-                                onClick={() => openAuth('register')}
-                            >
-                                Get Started
-                            </Button>
-                        </div>
-                    </motion.nav>
-                )}
-            </AnimatePresence>
 
             {/* Hero Section - with integrated auth */}
             <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
