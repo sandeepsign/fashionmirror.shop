@@ -90,6 +90,84 @@
     font-family: var(--font-serif);
   }
 
+  /* Dark mode styles (default for dashboard-dark) */
+  .dashboard-dark .upload-zone {
+    background: hsl(0 0% 6%);
+    border: 1px dashed hsl(0 0% 25%);
+    transition: all 0.3s ease;
+  }
+
+  .dashboard-dark .upload-zone:hover {
+    border-color: hsl(0 0% 50%);
+    background: hsl(0 0% 8%);
+  }
+
+  .dashboard-dark .image-preview {
+    background: hsl(0 0% 8%);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .dashboard-dark .fashion-card {
+    transition: all 0.3s ease;
+    background: hsl(0 0% 7%);
+    border: 1px solid hsl(0 0% 15%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .dashboard-dark .fashion-card:hover {
+    transform: translateY(-4px);
+    border-color: hsl(0 0% 30%);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+  }
+
+  .dashboard-dark .fashion-card.selected {
+    border: 2px solid hsl(43 96% 56%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.2) !important;
+    position: relative !important;
+    background: hsl(0 0% 10%) !important;
+  }
+
+  /* Light mode styles */
+  .dashboard-light .upload-zone {
+    background: hsl(0 0% 98%);
+    border: 1px dashed hsl(0 0% 75%);
+    transition: all 0.3s ease;
+  }
+
+  .dashboard-light .upload-zone:hover {
+    border-color: hsl(43 96% 56%);
+    background: hsl(0 0% 96%);
+  }
+
+  .dashboard-light .image-preview {
+    background: hsl(0 0% 98%);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid hsl(0 0% 90%);
+  }
+
+  .dashboard-light .fashion-card {
+    transition: all 0.3s ease;
+    background: white;
+    border: 1px solid hsl(0 0% 90%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .dashboard-light .fashion-card:hover {
+    transform: translateY(-4px);
+    border-color: hsl(0 0% 80%);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  }
+
+  .dashboard-light .fashion-card.selected {
+    border: 2px solid hsl(43 96% 50%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3) !important;
+    position: relative !important;
+    background: hsl(45 100% 98%) !important;
+  }
+
+  /* Legacy support - default to dark mode styles */
   .upload-zone {
     background: hsl(0 0% 6%);
     border: 1px dashed hsl(0 0% 25%);
@@ -132,7 +210,7 @@
     position: absolute;
     top: 12px;
     right: 12px;
-    background: hsl(0 0% 100%);
+    background: hsl(43 96% 56%);
     color: hsl(0 0% 4%);
     width: 28px;
     height: 28px;
@@ -150,14 +228,23 @@
     background: rgba(10, 10, 10, 0.95);
   }
 
+  .dashboard-light .fashion-card.selected .p-4 {
+    background: rgba(255, 250, 240, 0.95);
+  }
+
   .loading-overlay {
     background: rgba(0, 0, 0, 0.9);
     backdrop-filter: blur(8px);
   }
 
+  .dashboard-light .loading-overlay {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+  }
+
   .spinner {
     border: 3px solid hsl(0 0% 20%);
-    border-top: 3px solid hsl(0 0% 100%);
+    border-top: 3px solid hsl(43 96% 56%);
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -171,6 +258,10 @@
 
   .gradient-bg {
     background: linear-gradient(180deg, hsl(0 0% 4%) 0%, hsl(0 0% 6%) 100%);
+  }
+
+  .dashboard-light .gradient-bg {
+    background: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 97%) 100%);
   }
 
   .fashion-grid {

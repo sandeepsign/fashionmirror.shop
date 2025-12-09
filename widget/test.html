@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mirror.Me Widget Test Page</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .product-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .product-image {
+      width: 100%;
+      height: 300px;
+      object-fit: cover;
+      background: #f0f0f0;
+    }
+
+    .product-info {
+      padding: 16px;
+    }
+
+    .product-name {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 4px;
+      color: #333;
+    }
+
+    .product-price {
+      color: #6366f1;
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+
+    .product-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-cart {
+      background: #333;
+      color: white;
+    }
+
+    .btn-cart:hover {
+      background: #444;
+    }
+
+    .info-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .info-box h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #333;
+    }
+
+    .info-box code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Mirror.Me Widget Demo</h1>
+    <p class="subtitle">Test the virtual try-on widget integration</p>
+
+    <div class="product-grid">
+      <!-- Product 1 -->
+      <div class="product-card">
+        <img
+          src="https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&h=400&fit=crop"
+          alt="Blue Denim Jacket"
+          class="product-image"
+        >
+        <div class="product-info">
+          <div class="product-name">Classic Blue Denim Jacket</div>
+          <div class="product-price">$89.99</div>
+          <div class="product-actions">
+            <button
+              class="btn mirror-me-button"
+              data-merchant-key="mk_test_0d5a0koKq_KS1kdh0cqECPB6wnFEwEd7"
+              data-product-image="https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800&h=800&fit=crop"
+              data-product-name="Classic Blue Denim Jacket"
+              data-product-id="SKU-001"
+              data-product-category="jacket"
+              data-product-price="89.99"
+              data-product-currency="USD"
+            >
+              Try It On
+            </button>
+            <button class="btn btn-cart">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product 2 -->
+      <div class="product-card">
+        <img
+          src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=400&fit=crop"
+          alt="Floral Summer Dress"
+          class="product-image"
+        >
+        <div class="product-info">
+          <div class="product-name">Floral Summer Dress</div>
+          <div class="product-price">$65.00</div>
+          <div class="product-actions">
+            <button
+              class="btn mirror-me-button"
+              data-merchant-key="mk_test_0d5a0koKq_KS1kdh0cqECPB6wnFEwEd7"
+              data-product-image="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&h=800&fit=crop"
+              data-product-name="Floral Summer Dress"
+              data-product-id="SKU-002"
+              data-product-category="dress"
+              data-product-price="65.00"
+              data-product-currency="USD"
+            >
+              Try It On
+            </button>
+            <button class="btn btn-cart">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product 3 -->
+      <div class="product-card">
+        <img
+          src="https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&h=400&fit=crop"
+          alt="White Cotton T-Shirt"
+          class="product-image"
+        >
+        <div class="product-info">
+          <div class="product-name">White Cotton T-Shirt</div>
+          <div class="product-price">$29.99</div>
+          <div class="product-actions">
+            <button
+              class="btn mirror-me-button"
+              data-merchant-key="mk_test_0d5a0koKq_KS1kdh0cqECPB6wnFEwEd7"
+              data-product-image="https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=800&h=800&fit=crop"
+              data-product-name="White Cotton T-Shirt"
+              data-product-id="SKU-003"
+              data-product-category="top"
+              data-product-price="29.99"
+              data-product-currency="USD"
+            >
+              Try It On
+            </button>
+            <button class="btn btn-cart">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product 4 - With pre-populated user image -->
+      <div class="product-card">
+        <img
+          src="https://images.unsplash.com/photo-1598554747436-c9293d6a588f?w=400&h=400&fit=crop"
+          alt="Black Leather Jacket"
+          class="product-image"
+        >
+        <div class="product-info">
+          <div class="product-name">Black Leather Jacket</div>
+          <div class="product-price">$199.00</div>
+          <div class="product-actions">
+            <button
+              class="btn mirror-me-button"
+              data-merchant-key="mk_test_0d5a0koKq_KS1kdh0cqECPB6wnFEwEd7"
+              data-product-image="https://images.unsplash.com/photo-1598554747436-c9293d6a588f?w=800&h=800&fit=crop"
+              data-product-name="Black Leather Jacket"
+              data-product-id="SKU-004"
+              data-product-category="jacket"
+              data-product-price="199.00"
+              data-product-currency="USD"
+              data-theme="dark"
+            >
+              Try It On
+            </button>
+            <button class="btn btn-cart">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <h2>Integration Code</h2>
+      <p>Add this script tag to your HTML:</p>
+      <pre>&lt;script src="http://localhost:5000/widget/mirror.js"&gt;&lt;/script&gt;</pre>
+
+      <p>Then add the button with data attributes:</p>
+      <pre>&lt;button
+  class="mirror-me-button"
+  data-merchant-key="mk_test_xxx"
+  data-product-image="https://example.com/product.jpg"
+  data-product-name="Product Name"
+  data-product-price="99.99"
+  data-product-currency="USD"
+&gt;
+  Try It On
+&lt;/button&gt;</pre>
+
+      <h2>JavaScript API</h2>
+      <p>For more control, use the JavaScript API:</p>
+      <pre>const mirrorMe = MirrorMe.init({
+  merchantKey: 'mk_test_xxx',
+  theme: 'auto',
+  onResult: (result) => {
+    console.log('Try-on complete:', result);
+  }
+});
+
+// Open programmatically
+mirrorMe.open({
+  product: {
+    image: 'https://example.com/product.jpg',
+    name: 'Product Name',
+    price: 99.99
+  }
+});</pre>
+    </div>
+  </div>
+
+  <!-- Load the Mirror.Me widget -->
+  <script src="/widget/mirror.js"></script>
+
+  <!-- Debug: Log widget events -->
+  <script>
+    window.addEventListener('mirrormeReady', (e) => {
+      console.log('Mirror.Me widget ready:', e.detail);
+    });
+  </script>
+</body>
+</html>

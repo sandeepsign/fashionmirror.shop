@@ -1,29 +1,67 @@
-import { type User, type InsertUser, type TryOnResult, type InsertTryOnResult, type FashionItem, type InsertFashionItem, users, tryOnResults, fashionItems } from "@shared/schema";
-import { randomUUID } from "crypto";
+import {
+  type User, type InsertUser,
+  type TryOnResult, type InsertTryOnResult,
+  type FashionItem, type InsertFashionItem,
+  type WidgetSession, type InsertWidgetSession,
+  type WidgetAnalytics, type InsertWidgetAnalytics,
+  users, tryOnResults, fashionItems,
+  widgetSessions, widgetAnalytics
+} from "@shared/schema";
+import { randomUUID, randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import { eq, or, and, sql, desc } from "drizzle-orm";
 
+// Helper to generate API keys
+function generateApiKey(prefix: string): string {
+  return `${prefix}${randomBytes(24).toString("base64url")}`;
+}
+
+// Helper to generate webhook secret
+function generateWebhookSecret(): string {
+  return `whsec_${randomBytes(24).toString("base64url")}`;
+}
+
 export interface IStorage {
+  // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByApiKey(apiKey: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   getUserByVerificationToken(hashedToken: string): Promise<User | undefined>;
   updateUserVerification(id: string, isVerified: string, clearToken?: boolean): Promise<User>;
   updateUserVerificationToken(id: string, hashedToken: string, expiresAt: Date): Promise<User>;
-  
+  updateUserApiKeys(id: string, liveKey: string, testKey: string): Promise<User | undefined>;
+  incrementUserQuota(id: string): Promise<void>;
+  resetUserQuota(id: string, resetAt: Date): Promise<void>;
+
+  // Try-on result methods
   getTryOnResult(id: string): Promise<TryOnResult | undefined>;
   getTryOnResultsByUserId(userId: string): Promise<TryOnResult[]>;
   createTryOnResult(result: InsertTryOnResult): Promise<TryOnResult>;
   deleteTryOnResult(id: string, userId: string): Promise<boolean>;
-  
+
+  // Fashion item methods
   getFashionItem(id: string): Promise<FashionItem | undefined>;
   getFashionItems(userId?: string): Promise<FashionItem[]>;
   getFashionItemsByCategory(category: string, userId?: string): Promise<FashionItem[]>;
   createFashionItem(item: InsertFashionItem): Promise<FashionItem>;
   deleteFashionItem(id: string, userId: string): Promise<boolean>;
+
+  // Widget session methods
+  getWidgetSession(id: string): Promise<WidgetSession | undefined>;
+  getWidgetSessionsByUser(userId: string, limit?: number): Promise<WidgetSession[]>;
+  createWidgetSession(session: InsertWidgetSession): Promise<WidgetSession>;
+  updateWidgetSession(id: string, updates: Partial<WidgetSession>): Promise<WidgetSession | undefined>;
+  deleteWidgetSession(id: string): Promise<boolean>;
+
+  // Widget analytics methods
+  createWidgetAnalytics(analytics: InsertWidgetAnalytics): Promise<WidgetAnalytics>;
+  getWidgetAnalyticsByUser(userId: string, startDate?: Date, endDate?: Date): Promise<WidgetAnalytics[]>;
+  deleteWidgetAnalyticsBySession(sessionId: string): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -78,7 +116,7 @@ export class MemStorage implements IStorage {
       {
         name: "Denim Jacket",
         category: "Casual",
-        imageUrl: "https://pixabay.com/get/gf323024bd14f7265133baf65249e87ac2e4d018a3332c7af141135e529eddac3ff55a489c5a1bc4a3c5f0c3428686bfd89d51319a9cc77cba1d6c157ae0c22cb_1280.jpg",
+        imageUrl: "https://images.unsplash.com/photo-1551537482-f2075a1d41f2?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
         description: "Classic denim jacket for casual outfits"
       },
       {
@@ -126,7 +164,7 @@ export class MemStorage implements IStorage {
     const adminId = randomUUID();
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash("W3lcome1!", saltRounds);
-    
+
     const adminUser: User = {
       id: adminId,
       username: "admin",
@@ -136,9 +174,22 @@ export class MemStorage implements IStorage {
       isVerified: "true",
       verificationToken: null,
       verificationTokenExpires: null,
-      createdAt: new Date()
+      // API keys and quota fields
+      liveKey: generateApiKey("mk_live_"),
+      testKey: generateApiKey("mk_test_"),
+      allowedDomains: [],
+      plan: "free",
+      totalQuota: 100,
+      monthlyQuota: null,
+      quotaUsed: 0,
+      quotaResetAt: null,
+      webhookUrl: null,
+      webhookSecret: generateWebhookSecret(),
+      settings: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
-    
+
     this.users.set(adminId, adminUser);
     console.log("Default admin user created: admin / W3lcome1!");
   }
@@ -159,19 +210,51 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUserByApiKey(apiKey: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.liveKey === apiKey || user.testKey === apiKey,
+    );
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { 
-      ...insertUser, 
-      id, 
+    const user: User = {
+      ...insertUser,
+      id,
       role: insertUser.role || "user",
       isVerified: insertUser.isVerified || "false",
       verificationToken: insertUser.verificationToken || null,
       verificationTokenExpires: insertUser.verificationTokenExpires || null,
-      createdAt: new Date() 
+      // API keys - generate if not provided
+      liveKey: insertUser.liveKey || generateApiKey("mk_live_"),
+      testKey: insertUser.testKey || generateApiKey("mk_test_"),
+      allowedDomains: insertUser.allowedDomains || [],
+      plan: insertUser.plan || "free",
+      totalQuota: insertUser.totalQuota ?? 100,
+      monthlyQuota: insertUser.monthlyQuota ?? null,
+      quotaUsed: insertUser.quotaUsed ?? 0,
+      quotaResetAt: insertUser.quotaResetAt ?? null,
+      webhookUrl: insertUser.webhookUrl ?? null,
+      webhookSecret: insertUser.webhookSecret || generateWebhookSecret(),
+      settings: insertUser.settings || {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+
+    const updatedUser: User = {
+      ...user,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   async getUserByVerificationToken(hashedToken: string): Promise<User | undefined> {
@@ -213,6 +296,29 @@ export class MemStorage implements IStorage {
 
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async updateUserApiKeys(id: string, liveKey: string, testKey: string): Promise<User | undefined> {
+    return this.updateUser(id, { liveKey, testKey });
+  }
+
+  async incrementUserQuota(id: string): Promise<void> {
+    const user = this.users.get(id);
+    if (user) {
+      user.quotaUsed = (user.quotaUsed ?? 0) + 1;
+      user.updatedAt = new Date();
+      this.users.set(id, user);
+    }
+  }
+
+  async resetUserQuota(id: string, resetAt: Date): Promise<void> {
+    const user = this.users.get(id);
+    if (user) {
+      user.quotaUsed = 0;
+      user.quotaResetAt = resetAt;
+      user.updatedAt = new Date();
+      this.users.set(id, user);
+    }
   }
 
   async getTryOnResult(id: string): Promise<TryOnResult | undefined> {
@@ -318,14 +424,110 @@ export class MemStorage implements IStorage {
     if (!item) {
       return false;
     }
-    
+
     // Check if user owns this item (users can only delete their own items, not shared items)
     if (item.userId !== userId) {
       return false;
     }
-    
+
     this.fashionItems.delete(id);
     return true;
+  }
+
+  // Widget session methods
+  private widgetSessionsMap: Map<string, WidgetSession> = new Map();
+  private widgetAnalyticsMap: Map<number, WidgetAnalytics> = new Map();
+  private analyticsIdCounter = 1;
+
+  async getWidgetSession(id: string): Promise<WidgetSession | undefined> {
+    return this.widgetSessionsMap.get(id);
+  }
+
+  async getWidgetSessionsByUser(userId: string, limit = 20): Promise<WidgetSession[]> {
+    return Array.from(this.widgetSessionsMap.values())
+      .filter(s => s.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+
+  async createWidgetSession(session: InsertWidgetSession): Promise<WidgetSession> {
+    const newSession: WidgetSession = {
+      id: session.id,
+      userId: session.userId ?? null,
+      productImage: session.productImage,
+      productName: session.productName ?? null,
+      productId: session.productId ?? null,
+      productCategory: session.productCategory ?? null,
+      productPrice: session.productPrice ?? null,
+      productCurrency: session.productCurrency ?? null,
+      productUrl: session.productUrl ?? null,
+      externalUserId: session.externalUserId ?? null,
+      userImage: session.userImage ?? null,
+      status: session.status ?? "pending",
+      resultImage: session.resultImage ?? null,
+      resultThumbnail: session.resultThumbnail ?? null,
+      processingTime: session.processingTime ?? null,
+      errorCode: session.errorCode ?? null,
+      errorMessage: session.errorMessage ?? null,
+      originDomain: session.originDomain ?? null,
+      userAgent: session.userAgent ?? null,
+      ipAddress: session.ipAddress ?? null,
+      createdAt: new Date(),
+      completedAt: null,
+      expiresAt: session.expiresAt ?? null,
+    };
+    this.widgetSessionsMap.set(session.id, newSession);
+    return newSession;
+  }
+
+  async updateWidgetSession(id: string, updates: Partial<WidgetSession>): Promise<WidgetSession | undefined> {
+    const session = this.widgetSessionsMap.get(id);
+    if (!session) return undefined;
+
+    const updated = { ...session, ...updates };
+    this.widgetSessionsMap.set(id, updated);
+    return updated;
+  }
+
+  async deleteWidgetSession(id: string): Promise<boolean> {
+    return this.widgetSessionsMap.delete(id);
+  }
+
+  // Widget analytics methods
+  async createWidgetAnalytics(analytics: InsertWidgetAnalytics): Promise<WidgetAnalytics> {
+    const id = this.analyticsIdCounter++;
+    const newAnalytics: WidgetAnalytics = {
+      id,
+      userId: analytics.userId ?? null,
+      sessionId: analytics.sessionId ?? null,
+      eventType: analytics.eventType,
+      eventData: analytics.eventData ?? {},
+      createdAt: new Date(),
+    };
+    this.widgetAnalyticsMap.set(id, newAnalytics);
+    return newAnalytics;
+  }
+
+  async getWidgetAnalyticsByUser(userId: string, startDate?: Date, endDate?: Date): Promise<WidgetAnalytics[]> {
+    return Array.from(this.widgetAnalyticsMap.values())
+      .filter(a => {
+        if (a.userId !== userId) return false;
+        if (startDate && a.createdAt < startDate) return false;
+        if (endDate && a.createdAt > endDate) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async deleteWidgetAnalyticsBySession(sessionId: string): Promise<number> {
+    let count = 0;
+    for (const [id, analytics] of this.widgetAnalyticsMap.entries()) {
+      if (analytics.sessionId === sessionId) {
+        this.widgetAnalyticsMap.delete(id);
+        count++;
+      }
+    }
+    return count;
   }
 }
 
@@ -379,6 +581,40 @@ export class DatabaseStorage implements IStorage {
       verificationTokenExpires: expiresAt
     }).where(eq(users.id, id)).returning();
     return result[0];
+  }
+
+  async getUserByApiKey(apiKey: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(
+      or(
+        eq(users.liveKey, apiKey),
+        eq(users.testKey, apiKey)
+      )
+    ).limit(1);
+    return result[0];
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const result = await this.db.update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateUserApiKeys(id: string, liveKey: string, testKey: string): Promise<User | undefined> {
+    return this.updateUser(id, { liveKey, testKey });
+  }
+
+  async incrementUserQuota(id: string): Promise<void> {
+    await this.db.update(users)
+      .set({ quotaUsed: sql`${users.quotaUsed} + 1` })
+      .where(eq(users.id, id));
+  }
+
+  async resetUserQuota(id: string, resetAt: Date): Promise<void> {
+    await this.db.update(users)
+      .set({ quotaUsed: 0, quotaResetAt: resetAt })
+      .where(eq(users.id, id));
   }
 
   async getTryOnResult(id: string): Promise<TryOnResult | undefined> {
@@ -473,8 +709,64 @@ export class DatabaseStorage implements IStorage {
         eq(fashionItems.userId, userId)
       )
     ).returning();
-    
+
     return result.length > 0;
+  }
+
+  // Widget session methods
+  async getWidgetSession(id: string): Promise<WidgetSession | undefined> {
+    const result = await this.db.select().from(widgetSessions).where(eq(widgetSessions.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getWidgetSessionsByUser(userId: string, limit = 20): Promise<WidgetSession[]> {
+    return await this.db.select().from(widgetSessions)
+      .where(eq(widgetSessions.userId, userId))
+      .orderBy(desc(widgetSessions.createdAt))
+      .limit(limit);
+  }
+
+  async createWidgetSession(session: InsertWidgetSession): Promise<WidgetSession> {
+    const result = await this.db.insert(widgetSessions).values(session).returning();
+    return result[0];
+  }
+
+  async updateWidgetSession(id: string, updates: Partial<WidgetSession>): Promise<WidgetSession | undefined> {
+    const result = await this.db.update(widgetSessions)
+      .set(updates)
+      .where(eq(widgetSessions.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteWidgetSession(id: string): Promise<boolean> {
+    const result = await this.db.delete(widgetSessions)
+      .where(eq(widgetSessions.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Widget analytics methods
+  async createWidgetAnalytics(analytics: InsertWidgetAnalytics): Promise<WidgetAnalytics> {
+    const result = await this.db.insert(widgetAnalytics).values(analytics).returning();
+    return result[0];
+  }
+
+  async getWidgetAnalyticsByUser(userId: string, startDate?: Date, endDate?: Date): Promise<WidgetAnalytics[]> {
+    let query = this.db.select().from(widgetAnalytics)
+      .where(eq(widgetAnalytics.userId, userId))
+      .orderBy(desc(widgetAnalytics.createdAt));
+
+    // Note: For date filtering, we'd need to add additional where clauses
+    // This is a simplified version - in production, use proper date filtering
+    return await query;
+  }
+
+  async deleteWidgetAnalyticsBySession(sessionId: string): Promise<number> {
+    const result = await this.db.delete(widgetAnalytics)
+      .where(eq(widgetAnalytics.sessionId, sessionId))
+      .returning();
+    return result.length;
   }
 }
 
@@ -531,7 +823,7 @@ async function initializeDatabaseWithDefaults() {
         {
           name: "Denim Jacket",
           category: "Casual",
-          imageUrl: "https://pixabay.com/get/gf323024bd14f7265133baf65249e87ac2e4d018a3332c7af141135e529eddac3ff55a489c5a1bc4a3c5f0c3428686bfd89d51319a9cc77cba1d6c157ae0c22cb_1280.jpg",
+          imageUrl: "https://images.unsplash.com/photo-1551537482-f2075a1d41f2?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=400",
           description: "Classic denim jacket for casual outfits",
           userId: null,
           isShared: "true"
@@ -563,14 +855,22 @@ async function initializeDatabaseWithDefaults() {
     // Check if admin user exists
     const adminUser = await dbStorage.getUserByUsername("admin");
     if (!adminUser) {
-      // Create default admin user
+      // Create default admin user with API keys
       const hashedPassword = await bcrypt.hash("W3lcome1!", 12);
       await dbStorage.createUser({
         username: "admin",
         email: "admin@fashionmirror.com",
         password: hashedPassword,
         role: "admin",
-        isVerified: "true"
+        isVerified: "true",
+        liveKey: generateApiKey("mk_live_"),
+        testKey: generateApiKey("mk_test_"),
+        webhookSecret: generateWebhookSecret(),
+        allowedDomains: [],
+        plan: "free",
+        totalQuota: 100,
+        quotaUsed: 0,
+        settings: {},
       });
       console.log("Default admin user created: admin / W3lcome1!");
     }

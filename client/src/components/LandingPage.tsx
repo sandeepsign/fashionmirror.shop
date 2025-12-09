@@ -446,27 +446,27 @@ export default function LandingPage() {
                         <div>
                             <h3 className={`font-semibold mb-6 text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Platform</h3>
                             <ul className="space-y-4">
-                                <li><a href="#" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Virtual Try-On</a></li>
-                                <li><a href="#" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Technology</a></li>
-                                <li><a href="#" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Pricing</a></li>
+                                <li><a href="/technology" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Technology</a></li>
+                                <li><a href="/docs" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Documentation</a></li>
+                                <li><a href="/docs/api" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>API Reference</a></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h3 className={`font-semibold mb-6 text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Company</h3>
+                            <h3 className={`font-semibold mb-6 text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Resources</h3>
                             <ul className="space-y-4">
-                                <li><a href="#" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>About Us</a></li>
-                                <li><a href="#" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Blog</a></li>
-                                <li><a href="#" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Careers</a></li>
+                                <li><a href="/blog" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Blog</a></li>
+                                <li><a href="/merchant/login" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Merchant Dashboard</a></li>
+                                <li><a href="mailto:support@fashionmirror.shop" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Support</a></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h3 className={`font-semibold mb-6 text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Legal</h3>
+                            <h3 className={`font-semibold mb-6 text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Developers</h3>
                             <ul className="space-y-4">
-                                <li><a href="#" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Privacy Policy</a></li>
-                                <li><a href="#" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Terms of Service</a></li>
-                                <li><a href="#" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Cookie Policy</a></li>
+                                <li><a href="/docs" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Quick Start</a></li>
+                                <li><a href="/docs/api" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>API Docs</a></li>
+                                <li><a href="https://github.com/fashionmirror" target="_blank" rel="noopener noreferrer" className={`hover:text-primary transition-colors ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>GitHub</a></li>
                             </ul>
                         </div>
                     </div>

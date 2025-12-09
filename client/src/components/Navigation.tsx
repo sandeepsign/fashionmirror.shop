@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "./AuthModal";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, LayoutDashboard, Code, BarChart3, Settings, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +33,46 @@ export default function Navigation() {
             <a href="#" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-studio">Studio</a>
             <a href="#" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-gallery">Gallery</a>
             <a href="#" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-pricing">Pricing</a>
-            
+
+            {isAuthenticated && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-1 text-muted-foreground hover:text-foreground">
+                    <span>Platform</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Dashboard</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <Link href="/dashboard">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Try-On Studio
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/dashboard/integration">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <Code className="mr-2 h-4 w-4" />
+                      Integration
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/dashboard/analytics">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      Analytics
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/dashboard/settings">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                  </Link>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -86,15 +126,37 @@ export default function Navigation() {
               <a href="#" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-studio-mobile">Studio</a>
               <a href="#" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-gallery-mobile">Gallery</a>
               <a href="#" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-pricing-mobile">Pricing</a>
-              
+
+              {isAuthenticated && (
+                <div className="space-y-2 pt-2 border-t border-border">
+                  <div className="text-sm font-medium text-foreground">Platform</div>
+                  <Link href="/dashboard" className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Try-On Studio
+                  </Link>
+                  <Link href="/dashboard/integration" className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
+                    <Code className="mr-2 h-4 w-4" />
+                    Integration
+                  </Link>
+                  <Link href="/dashboard/analytics" className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Analytics
+                  </Link>
+                  <Link href="/dashboard/settings" className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
+                </div>
+              )}
+
               {isAuthenticated ? (
-                <div className="space-y-2">
+                <div className="space-y-2 pt-2 border-t border-border">
                   <div className="text-sm text-muted-foreground">
                     Signed in as {user?.username}
                   </div>
-                  <Button 
+                  <Button
                     onClick={logout}
-                    variant="outline" 
+                    variant="outline"
                     className="w-full text-red-600 border-red-200"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
@@ -102,9 +164,9 @@ export default function Navigation() {
                   </Button>
                 </div>
               ) : (
-                <Button 
+                <Button
                   onClick={() => setIsAuthModalOpen(true)}
-                  className="bg-primary text-primary-foreground hover:opacity-90 w-full" 
+                  className="bg-primary text-primary-foreground hover:opacity-90 w-full"
                   data-testid="button-login-mobile"
                 >
                   Sign In

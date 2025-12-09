@@ -1,0 +1,349 @@
+/**
+ * Mirror.Me Widget Styles
+ * Version: 1.0.0
+ */
+
+/* CSS Custom Properties (Theming) */
+:root {
+  --mirror-me-primary: #6366f1;
+  --mirror-me-primary-hover: #4f46e5;
+  --mirror-me-background: #ffffff;
+  --mirror-me-surface: #f8fafc;
+  --mirror-me-text: #1e293b;
+  --mirror-me-text-muted: #64748b;
+  --mirror-me-border: #e2e8f0;
+  --mirror-me-error: #ef4444;
+  --mirror-me-success: #22c55e;
+  --mirror-me-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mirror-me-font-size-base: 14px;
+  --mirror-me-border-radius: 8px;
+  --mirror-me-modal-border-radius: 16px;
+  --mirror-me-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --mirror-me-shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --mirror-me-z-index: 999999;
+}
+
+/* Dark theme */
+[data-mirror-me-theme="dark"] {
+  --mirror-me-background: #0f172a;
+  --mirror-me-surface: #1e293b;
+  --mirror-me-text: #f1f5f9;
+  --mirror-me-text-muted: #94a3b8;
+  --mirror-me-border: #334155;
+}
+
+/* Modal Overlay */
+.mirror-me-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--mirror-me-z-index);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  font-family: var(--mirror-me-font-family);
+  font-size: var(--mirror-me-font-size-base);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.mirror-me-modal--open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Backdrop */
+.mirror-me-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Container */
+.mirror-me-container {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 32px);
+  background: var(--mirror-me-background);
+  border-radius: var(--mirror-me-modal-border-radius);
+  box-shadow: var(--mirror-me-shadow-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(20px) scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mirror-me-modal--open .mirror-me-container {
+  transform: translateY(0) scale(1);
+}
+
+/* Close Button */
+.mirror-me-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--mirror-me-surface);
+  color: var(--mirror-me-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.mirror-me-close:hover {
+  background: var(--mirror-me-border);
+  color: var(--mirror-me-text);
+  transform: scale(1.05);
+}
+
+.mirror-me-close:active {
+  transform: scale(0.95);
+}
+
+.mirror-me-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Loading State */
+.mirror-me-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  color: var(--mirror-me-text-muted);
+}
+
+.mirror-me-loading p {
+  margin: 16px 0 0;
+  font-size: 14px;
+}
+
+/* Spinner */
+.mirror-me-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--mirror-me-border);
+  border-top-color: var(--mirror-me-primary);
+  border-radius: 50%;
+  animation: mirror-me-spin 0.8s linear infinite;
+}
+
+@keyframes mirror-me-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Iframe */
+.mirror-me-iframe {
+  width: 100%;
+  height: 600px;
+  max-height: calc(100vh - 64px);
+  border: none;
+  background: var(--mirror-me-background);
+}
+
+/* Button Styles (for default buttons) */
+.mirror-me-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-family: var(--mirror-me-font-family);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  color: white;
+  background: linear-gradient(to bottom, #151515 0%, #040404 50%, #000000 100%);
+  border: none;
+  border-radius: var(--mirror-me-border-radius);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--mirror-me-shadow);
+}
+
+/* Mirror.me Logo SVG in button */
+.mirror-me-button .mirror-me-logo {
+  height: 24px;
+  width: auto;
+  fill: white;
+}
+
+.mirror-me-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px -4px rgb(99 102 241 / 0.4);
+}
+
+.mirror-me-button:active {
+  transform: translateY(0);
+}
+
+/* Button Variants */
+.mirror-me-button[data-button-style="pill"] {
+  border-radius: 50px;
+}
+
+.mirror-me-button[data-button-style="minimal"] {
+  background: transparent;
+  color: var(--mirror-me-primary);
+  box-shadow: none;
+  padding: 8px 16px;
+}
+
+.mirror-me-button[data-button-style="minimal"]:hover {
+  background: var(--mirror-me-surface);
+  box-shadow: none;
+  transform: none;
+}
+
+.mirror-me-button[data-button-style="icon-only"] {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+/* Button Sizes */
+.mirror-me-button[data-button-size="small"] {
+  padding: 8px 16px;
+  font-size: 12px;
+}
+
+.mirror-me-button[data-button-size="large"] {
+  padding: 16px 32px;
+  font-size: 16px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .mirror-me-modal {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .mirror-me-container {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: var(--mirror-me-modal-border-radius) var(--mirror-me-modal-border-radius) 0 0;
+  }
+
+  .mirror-me-modal--open .mirror-me-container {
+    transform: translateY(0);
+  }
+
+  .mirror-me-iframe {
+    height: calc(90vh - 20px);
+    max-height: none;
+  }
+}
+
+/* Fullscreen modal option */
+.mirror-me-modal[data-modal-size="fullscreen"] {
+  padding: 0;
+}
+
+.mirror-me-modal[data-modal-size="fullscreen"] .mirror-me-container {
+  max-width: 100%;
+  max-height: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.mirror-me-modal[data-modal-size="fullscreen"] .mirror-me-iframe {
+  height: 100%;
+  max-height: none;
+}
+
+/* Large modal */
+.mirror-me-modal[data-modal-size="large"] .mirror-me-container {
+  max-width: 640px;
+}
+
+.mirror-me-modal[data-modal-size="large"] .mirror-me-iframe {
+  height: 700px;
+}
+
+/* Small modal */
+.mirror-me-modal[data-modal-size="small"] .mirror-me-container {
+  max-width: 360px;
+}
+
+.mirror-me-modal[data-modal-size="small"] .mirror-me-iframe {
+  height: 500px;
+}
+
+/* Position variants */
+.mirror-me-modal[data-position="right"] {
+  justify-content: flex-end;
+  padding-right: 0;
+}
+
+.mirror-me-modal[data-position="right"] .mirror-me-container {
+  border-radius: var(--mirror-me-modal-border-radius) 0 0 var(--mirror-me-modal-border-radius);
+  max-height: 100%;
+  height: 100%;
+}
+
+.mirror-me-modal[data-position="left"] {
+  justify-content: flex-start;
+  padding-left: 0;
+}
+
+.mirror-me-modal[data-position="left"] .mirror-me-container {
+  border-radius: 0 var(--mirror-me-modal-border-radius) var(--mirror-me-modal-border-radius) 0;
+  max-height: 100%;
+  height: 100%;
+}
+
+/* Accessibility */
+.mirror-me-modal:focus-visible {
+  outline: none;
+}
+
+.mirror-me-close:focus-visible {
+  outline: 2px solid var(--mirror-me-primary);
+  outline-offset: 2px;
+}
+
+/* Print styles - hide modal when printing */
+@media print {
+  .mirror-me-modal {
+    display: none !important;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .mirror-me-modal,
+  .mirror-me-container,
+  .mirror-me-close,
+  .mirror-me-button {
+    transition: none;
+  }
+
+  .mirror-me-spinner {
+    animation: none;
+  }
+}

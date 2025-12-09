@@ -50,7 +50,15 @@ Focus on:
       }]
     });
 
-    const text = result.text || result.response?.text?.() || result.response?.candidates?.[0]?.content?.parts?.[0]?.text || "Could not parse AI response";
+    // Access text from the Gemini response structure
+    const candidates = result.candidates;
+    let text = "Could not parse AI response";
+    if (candidates && candidates.length > 0) {
+      const parts = candidates[0]?.content?.parts;
+      if (parts && parts.length > 0 && parts[0].text) {
+        text = parts[0].text;
+      }
+    }
     
     // Parse JSON response
     const jsonMatch = text.match(/\{[\s\S]*\}/);

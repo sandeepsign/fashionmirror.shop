@@ -5,7 +5,11 @@ import { insertTryOnResultSchema, registerUserSchema, loginUserSchema } from "@s
 import { generateVirtualTryOn, generateSimultaneousTryOn, generateProgressiveTryOn, imageBufferToBase64 } from "./services/gemini";
 import { analyzeImageWithAI } from "./services/imageAnalyzer";
 import { generateVerificationToken, hashVerificationToken, sendVerificationEmail, sendWelcomeEmail } from "./services/emailVerification";
+import { generateUserApiKeys, generateWebhookSecret } from "./services/merchantService";
 import { requireAuth, optionalAuth } from "./middleware/auth";
+import { incrementQuota } from "./middleware/widgetAuth";
+import widgetRouter from "./routes/widget";
+import accountRouter from "./routes/account";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import { z } from "zod";
@@ -43,9 +47,15 @@ function validateTextPrompt(textPrompt: any): string | undefined {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
+
+  // Mirror.Me Widget API routes
+  app.use("/api/widget", widgetRouter);
+
+  // Unified Account API routes (replaces merchant routes)
+  app.use("/api/account", accountRouter);
+
   // Authentication routes
-  
+
   // User registration
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -79,7 +89,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate verification token
       const verificationData = generateVerificationToken();
 
-      // Create user with unverified status
+      // Generate API keys for the new user
+      const { liveKey, testKey } = generateUserApiKeys();
+      const webhookSecret = generateWebhookSecret();
+
+      // Create default API key in the new format
+      const defaultApiKey = {
+        id: crypto.randomUUID(),
+        key: liveKey,
+        name: 'Default Key',
+        createdAt: new Date().toISOString(),
+      };
+
+      // Create user with unverified status and API keys
       const newUser = await storage.createUser({
         username,
         email,
@@ -87,7 +109,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: "user",
         isVerified: "false",
         verificationToken: verificationData.hashedToken,
-        verificationTokenExpires: verificationData.expiresAt
+        verificationTokenExpires: verificationData.expiresAt,
+        // API keys and quota (generated at registration)
+        liveKey,
+        testKey,
+        apiKeys: [defaultApiKey],  // Default key in new format
+        webhookSecret,
+        allowedDomains: [],
+        plan: "free",
+        totalQuota: 100,
+        quotaUsed: 0,
+        settings: {},
       });
 
       // Send verification email
@@ -558,20 +590,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             
             results.push(tryOnResult);
+
+            // Increment quota for each successful try-on
+            await incrementQuota(userId);
           }
         } catch (itemError) {
           console.error(`Error processing fashion item ${i}:`, itemError);
           // Continue processing other items even if one fails
         }
       }
-      
+
       res.json({
         success: true,
         results,
         completed: results.length,
         total: fashionItems.length
       });
-      
+
     } catch (error) {
       console.error("Error generating batch virtual try-on:", error);
       res.status(500).json({ 
@@ -691,11 +726,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Increment quota for the simultaneous try-on
+      await incrementQuota(userId);
+
       res.json({
         success: true,
         result: tryOnResult
       });
-      
+
     } catch (error) {
       console.error("Error generating simultaneous virtual try-on:", error);
       res.status(500).json({ 
@@ -882,12 +920,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Increment quota for the progressive try-on
+      await incrementQuota(userId);
+
       res.json({
         success: true,
         result: tryOnResult,
         stepResults: result.stepResults // Include intermediate step images
       });
-      
+
     } catch (error) {
       console.error("Error generating progressive virtual try-on:", error);
       res.status(500).json({ 
@@ -968,6 +1009,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Increment quota for the try-on
+      await incrementQuota(userId);
+
       res.json({
         success: true,
         result: tryOnResult
@@ -975,8 +1019,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error("Error generating virtual try-on:", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to generate try-on result" 
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to generate try-on result"
       });
     }
   });

@@ -147,6 +147,26 @@ app.use((req, res, next) => {
     }
   }));
 
+  // Serve widget files (JavaScript and CSS)
+  const widgetDir = path.join(process.cwd(), 'widget');
+  app.use('/widget', express.static(widgetDir, {
+    maxAge: '1h', // Cache for 1 hour in production
+    etag: true,
+    setHeaders: (res, filePath) => {
+      res.set('X-Content-Type-Options', 'nosniff');
+      // Allow cross-origin requests for widget assets
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'GET');
+      // Set correct MIME types
+      if (filePath.endsWith('.js')) {
+        res.set('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.set('Content-Type', 'text/css');
+      }
+    }
+  }));
+  log("Widget static files configured at /widget");
+
   // Register media routes for protected content
   try {
     registerMediaRoutes(app);
