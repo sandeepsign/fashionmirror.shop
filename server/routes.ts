@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         testKey,
         apiKeys: [defaultApiKey],  // Default key in new format
         webhookSecret,
-        allowedDomains: [],
+        allowedDomains: ['fashionmirror.shop'],
         plan: "free",
         totalQuota: 100,
         quotaUsed: 0,

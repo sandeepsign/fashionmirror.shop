@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FashionMirror Widget Demo - Demo Store</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      color: #666;
+      font-size: 1rem;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+
+    .product-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .product-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+
+    .product-image {
+      width: 100%;
+      height: 350px;
+      object-fit: cover;
+      background: #f0f0f0;
+    }
+
+    .product-info {
+      padding: 20px;
+    }
+
+    .product-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .product-price {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #e91e63;
+      margin-bottom: 12px;
+    }
+
+    .product-description {
+      color: #666;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .product-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .add-to-cart {
+      flex: 1;
+      padding: 12px 20px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .add-to-cart:hover {
+      background: #555;
+    }
+
+    /* Mirror Me button styling is handled by the widget */
+    .mirror-me-button {
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .mirror-me-button:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 60px;
+      padding: 20px;
+      color: #999;
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: #667eea;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Demo Fashion Store</h1>
+      <p>Try on clothes virtually with FashionMirror AI</p>
+    </header>
+
+    <div class="products-grid">
+      <!-- Product 1: Classic White T-Shirt -->
+      <div class="product-card">
+        <img
+          src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=700&fit=crop"
+          alt="Classic White T-Shirt"
+          class="product-image"
+        >
+        <div class="product-info">
+          <span class="badge">Bestseller</span>
+          <h2 class="product-name">Classic White Cotton T-Shirt</h2>
+          <div class="product-price">$29.99</div>
+          <p class="product-description">
+            A timeless essential crafted from premium organic cotton.
+            Perfect for layering or wearing on its own.
+          </p>
+          <div class="product-actions">
+            <button class="add-to-cart">Add to Cart</button>
+            <button
+              class="mirror-me-button"
+              data-merchant-key="mk_live_3533Yn9oFrcfd8afoaSsd_CScdP9Qxnr"
+              data-product-image="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=700&fit=crop"
+              data-product-name="Classic White Cotton T-Shirt"
+              data-product-id="tshirt-white-001"
+              data-product-specification="100% Organic Cotton, Machine Washable, Pre-shrunk"
+              data-product-description="A timeless essential crafted from premium organic cotton. Features a relaxed fit with reinforced stitching for durability. Perfect for layering or wearing on its own."
+            >
+              Try On
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product 2: Denim Jacket -->
+      <div class="product-card">
+        <img
+          src="https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&h=700&fit=crop"
+          alt="Vintage Denim Jacket"
+          class="product-image"
+        >
+        <div class="product-info">
+          <span class="badge">New Arrival</span>
+          <h2 class="product-name">Vintage Denim Jacket</h2>
+          <div class="product-price">$89.99</div>
+          <p class="product-description">
+            Classic denim jacket with a modern twist. Features brass buttons
+            and adjustable waist tabs for the perfect fit.
+          </p>
+          <div class="product-actions">
+            <button class="add-to-cart">Add to Cart</button>
+            <button
+              class="mirror-me-button"
+              data-merchant-key="mk_live_3533Yn9oFrcfd8afoaSsd_CScdP9Qxnr"
+              data-product-image="https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&h=700&fit=crop"
+              data-product-name="Vintage Denim Jacket"
+              data-product-id="jacket-denim-002"
+              data-product-specification="98% Cotton, 2% Elastane, Brass Buttons, Machine Washable"
+              data-product-description="Classic denim jacket with a modern twist. Features brass buttons, adjustable waist tabs, and two chest pockets. The perfect layering piece for any season."
+            >
+              Try On
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product 3: Floral Summer Dress -->
+      <div class="product-card">
+        <img
+          src="https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=600&h=700&fit=crop"
+          alt="Floral Summer Dress"
+          class="product-image"
+        >
+        <div class="product-info">
+          <span class="badge">Summer Collection</span>
+          <h2 class="product-name">Floral Summer Dress</h2>
+          <div class="product-price">$59.99</div>
+          <p class="product-description">
+            Light and breezy floral print dress perfect for warm days.
+            Features a flattering A-line silhouette.
+          </p>
+          <div class="product-actions">
+            <button class="add-to-cart">Add to Cart</button>
+            <button
+              class="mirror-me-button"
+              data-merchant-key="mk_live_3533Yn9oFrcfd8afoaSsd_CScdP9Qxnr"
+              data-product-image="https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=600&h=700&fit=crop"
+              data-product-name="Floral Summer Dress"
+              data-product-id="dress-floral-003"
+              data-product-specification="100% Rayon, Hand Wash Recommended, Lined, Side Zipper"
+              data-product-description="Light and breezy floral print dress perfect for warm summer days. Features a flattering A-line silhouette with an adjustable tie waist and side pockets."
+            >
+              Try On
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product 4: Navy Blazer -->
+      <div class="product-card">
+        <img
+          src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&h=700&fit=crop"
+          alt="Tailored Navy Blazer"
+          class="product-image"
+        >
+        <div class="product-info">
+          <span class="badge">Professional</span>
+          <h2 class="product-name">Tailored Navy Blazer</h2>
+          <div class="product-price">$149.99</div>
+          <p class="product-description">
+            Sophisticated navy blazer with a tailored fit. Perfect for
+            the office or smart casual occasions.
+          </p>
+          <div class="product-actions">
+            <button class="add-to-cart">Add to Cart</button>
+            <button
+              class="mirror-me-button"
+              data-merchant-key="mk_live_3533Yn9oFrcfd8afoaSsd_CScdP9Qxnr"
+              data-product-image="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&h=700&fit=crop"
+              data-product-name="Tailored Navy Blazer"
+              data-product-id="blazer-navy-004"
+              data-product-specification="65% Polyester, 35% Viscose, Dry Clean Only, Fully Lined"
+              data-product-description="Sophisticated navy blazer with a tailored fit. Features notched lapels, two-button closure, and functional pockets. Perfect for the office or smart casual occasions."
+            >
+              Try On
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>
+        Powered by <a href="https://fashionmirror.shop" target="_blank">FashionMirror</a> -
+        AI Virtual Try-On Technology
+      </p>
+    </footer>
+  </div>
+
+  <!-- FashionMirror Widget Script -->
+  <script src="https://fashionmirror.shop/widget/mirror.js"></script>
+</body>
+</html>

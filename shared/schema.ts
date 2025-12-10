@@ -75,7 +75,7 @@ export const users = pgTable("users", {
   apiKeys: jsonb("api_keys").default([]),  // Multiple API keys storage
 
   // Domain whitelist for widget embedding
-  allowedDomains: jsonb("allowed_domains").default([]),
+  allowedDomains: jsonb("allowed_domains").default(['fashionmirror.shop']),
 
   // Subscription plan
   plan: varchar("plan", { length: 50 }).default("free"),
