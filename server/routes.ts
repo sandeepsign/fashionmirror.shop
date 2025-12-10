@@ -7,7 +7,7 @@ import { analyzeImageWithAI } from "./services/imageAnalyzer";
 import { generateVerificationToken, hashVerificationToken, sendVerificationEmail, sendWelcomeEmail } from "./services/emailVerification";
 import { generateUserApiKeys, generateWebhookSecret } from "./services/merchantService";
 import { requireAuth, optionalAuth } from "./middleware/auth";
-import { incrementQuota } from "./middleware/widgetAuth";
+import { incrementStudioQuota } from "./middleware/widgetAuth";
 import widgetRouter from "./routes/widget";
 import accountRouter from "./routes/account";
 import multer from "multer";
@@ -592,7 +592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             results.push(tryOnResult);
 
             // Increment quota for each successful try-on
-            await incrementQuota(userId);
+            await incrementStudioQuota(userId);
           }
         } catch (itemError) {
           console.error(`Error processing fashion item ${i}:`, itemError);
@@ -727,7 +727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Increment quota for the simultaneous try-on
-      await incrementQuota(userId);
+      await incrementStudioQuota(userId);
 
       res.json({
         success: true,
@@ -921,7 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Increment quota for the progressive try-on
-      await incrementQuota(userId);
+      await incrementStudioQuota(userId);
 
       res.json({
         success: true,
@@ -1010,7 +1010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Increment quota for the try-on
-      await incrementQuota(userId);
+      await incrementStudioQuota(userId);
 
       res.json({
         success: true,

@@ -168,33 +168,31 @@ export default function ResultsGallery({ latestResults = [] }: ResultsGalleryPro
                 <i className="fas fa-trash text-sm"></i>
               </button>
 
-              <div className="p-4">
+              <div className="p-4 bg-white [.dashboard-dark_&]:bg-gray-900">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-foreground" data-testid={`text-result-name-${index}`}>
+                  <span className="text-sm font-medium text-gray-900 [.dashboard-dark_&]:text-white" data-testid={`text-result-name-${index}`}>
                     {result.fashionItemName}
                   </span>
-                  <span className="text-xs text-muted-foreground" data-testid={`text-result-time-${index}`}>
+                  <span className="text-xs text-gray-500 [.dashboard-dark_&]:text-gray-400" data-testid={`text-result-time-${index}`}>
                     {formatTimeAgo(new Date(result.createdAt))}
                   </span>
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
-                    size="sm"
-                    className="flex-1 bg-primary text-primary-foreground hover:opacity-90"
+                  <button
+                    className="flex-1 inline-flex items-center justify-center gap-2 h-9 rounded-md px-3 text-sm font-medium text-white hover:opacity-90 transition-colors"
+                    style={{ background: 'linear-gradient(to right, #ec4899, #a855f7)' }}
                     onClick={() => handleView(result)}
                     data-testid={`button-view-${index}`}
                   >
                     <i className="fas fa-eye mr-1"></i>View
-                  </Button>
-                  <Button 
-                    size="sm"
-                    variant="outline" 
-                    className="flex-1"
+                  </button>
+                  <button
+                    className="flex-1 inline-flex items-center justify-center gap-2 h-9 rounded-md px-3 text-sm font-medium transition-colors gallery-share-btn"
                     onClick={() => handleShare(result)}
                     data-testid={`button-share-${index}`}
                   >
                     <i className="fas fa-share mr-1"></i>Share
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>

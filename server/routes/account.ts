@@ -36,6 +36,8 @@ router.get("/profile", async (req: Request, res: Response) => {
         totalQuota: user.totalQuota ?? 100,
         monthlyQuota: user.monthlyQuota ?? null,
         quotaUsed: quota.used,
+        studioQuotaUsed: user.studioQuotaUsed ?? 0,
+        widgetQuotaUsed: user.widgetQuotaUsed ?? 0,
         quotaResetAt: user.quotaResetAt ? user.quotaResetAt.toISOString() : null,
       },
       planLimits: limits,

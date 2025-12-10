@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
 import { getStorage } from "../storage";
-import { widgetAuth, checkQuota, incrementQuota } from "../middleware/widgetAuth";
+import { widgetAuth, checkQuota, incrementWidgetQuota } from "../middleware/widgetAuth";
 import {
   generateSessionId,
   extractDomain,
@@ -634,8 +634,8 @@ router.post(
           completedAt: new Date(),
         });
 
-        // Increment user quota
-        await incrementQuota(user.id);
+        // Increment widget quota
+        await incrementWidgetQuota(user.id);
 
         // Track completion
         await storage.createWidgetAnalytics({

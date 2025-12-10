@@ -294,7 +294,7 @@ export async function checkQuota(
 }
 
 /**
- * Increment quota after successful try-on
+ * Increment quota after successful try-on (legacy - increments combined total only)
  * Should be called after successful processing
  */
 export async function incrementQuota(userId: string): Promise<void> {
@@ -303,6 +303,32 @@ export async function incrementQuota(userId: string): Promise<void> {
     await storage.incrementUserQuota(userId);
   } catch (error) {
     console.error("Error incrementing user quota:", error);
+  }
+}
+
+/**
+ * Increment studio quota after successful Studio try-on
+ * Increments both studioQuotaUsed and combined quotaUsed
+ */
+export async function incrementStudioQuota(userId: string): Promise<void> {
+  try {
+    const storage = await getStorage();
+    await storage.incrementStudioQuota(userId);
+  } catch (error) {
+    console.error("Error incrementing studio quota:", error);
+  }
+}
+
+/**
+ * Increment widget quota after successful Widget try-on
+ * Increments both widgetQuotaUsed and combined quotaUsed
+ */
+export async function incrementWidgetQuota(userId: string): Promise<void> {
+  try {
+    const storage = await getStorage();
+    await storage.incrementWidgetQuota(userId);
+  } catch (error) {
+    console.error("Error incrementing widget quota:", error);
   }
 }
 

@@ -275,6 +275,27 @@
       grid-template-columns: repeat(4, 1fr);
     }
   }
+
+  /* Gallery Share button styles */
+  .gallery-share-btn {
+    background: #fdf2f8;
+    border: 1px solid #f9a8d4;
+    color: #db2777;
+  }
+
+  .gallery-share-btn:hover {
+    background: #fce7f3;
+  }
+
+  .dashboard-dark .gallery-share-btn {
+    background: rgba(236, 72, 153, 0.1);
+    border: 1px solid rgba(236, 72, 153, 0.4);
+    color: #f472b6;
+  }
+
+  .dashboard-dark .gallery-share-btn:hover {
+    background: rgba(236, 72, 153, 0.2);
+  }
 }
 
   .fashion-item-row {

@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
-import ModelUpload from "@/components/ModelUpload";
-import FashionUpload from "@/components/FashionUpload";
-import FashionCollection from "@/components/FashionCollection";
 import TryOnWorkspace from "@/components/TryOnWorkspace";
 import ResultsGallery from "@/components/ResultsGallery";
 import LandingPage from "@/components/LandingPage";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FashionItem, TryOnResult } from "@shared/schema";
-import { FashionItemInput } from "@/lib/api";
+import { FashionItemInput, apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
@@ -40,7 +37,6 @@ function Dashboard() {
   const [allFashionItems, setAllFashionItems] = useState<FashionItemInput[]>([]);
   const [itemSelectionStates, setItemSelectionStates] = useState<boolean[]>([]);
   const [latestResults, setLatestResults] = useState<TryOnResult[]>([]);
-  const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ completed: 0, total: 0 });
   const [verificationMessage, setVerificationMessage] = useState<{
@@ -60,27 +56,27 @@ function Dashboard() {
 
       switch (verification) {
         case 'success':
-          message = `✅ Email verified successfully! ${email ? `Welcome, ${email}!` : ''} You can now log in to your FashionMirror account.`;
+          message = `Email verified successfully! ${email ? `Welcome, ${email}!` : ''} You can now log in to your FashionMirror account.`;
           type = 'success';
           break;
         case 'already-verified':
-          message = '✅ Your email is already verified! You can log in to your account.';
+          message = 'Your email is already verified! You can log in to your account.';
           type = 'info';
           break;
         case 'invalid':
-          message = '❌ Invalid verification link. Please check your email for the correct link or register again.';
+          message = 'Invalid verification link. Please check your email for the correct link or register again.';
           type = 'error';
           break;
         case 'expired':
-          message = '❌ Verification link has expired. Please register again to receive a new verification email.';
+          message = 'Verification link has expired. Please register again to receive a new verification email.';
           type = 'error';
           break;
         case 'service-error':
-          message = '❌ Service temporarily unavailable. Please try again later or contact support if the issue persists.';
+          message = 'Service temporarily unavailable. Please try again later or contact support if the issue persists.';
           type = 'error';
           break;
         case 'error':
-          message = '❌ Verification failed due to a technical error. Please try again or contact support.';
+          message = 'Verification failed due to a technical error. Please try again or contact support.';
           type = 'error';
           break;
         default:
@@ -89,7 +85,7 @@ function Dashboard() {
 
       if (message) {
         setVerificationMessage({ type, message });
-        
+
         // Clean up URL parameters
         const newUrl = window.location.pathname;
         window.history.replaceState(null, '', newUrl);
@@ -97,63 +93,76 @@ function Dashboard() {
     }
   }, []);
 
-  const handleModelImageSelect = (file: File) => {
+  const handleModelImageSelect = (file: File | null) => {
     setModelImage(file);
-    if (file) setCurrentStep(2);
   };
 
-  const handleFashionImagesSelect = (files: File[]) => {
-    setFashionImages(files);
-    // Convert uploaded files to FashionItemInput format
-    const newFashionItems: FashionItemInput[] = files.map((file, index) => ({
-      image: file,
-      name: file.name.split('.')[0] || `Fashion Item ${index + 1}`,
-      category: 'Custom',
-      source: 'upload' as const
-    }));
-    setAllFashionItems(newFashionItems);
-    setItemSelectionStates(new Array(newFashionItems.length).fill(true)); // Select all by default
-    setSelectedFashionItems([]); // Clear collection selection
-    if (files.length > 0) setCurrentStep(3);
+  const handleFashionImagesSelect = async (files: File[]) => {
+    if (files.length === 0) return;
+
+    // Clear collection selections when uploading
+    setSelectedFashionItems([]);
+
+    // Analyze each image and create fashion items
+    const newFashionItems: FashionItemInput[] = [];
+
+    for (const file of files) {
+      try {
+        const analysis = await apiClient.analyzeFashionImage(file);
+        newFashionItems.push({
+          image: file,
+          name: analysis.name,
+          category: analysis.category,
+          source: 'upload' as const
+        });
+      } catch (error) {
+        console.error('Failed to analyze image:', error);
+        // Use fallback values
+        newFashionItems.push({
+          image: file,
+          name: file.name.split('.')[0] || `Fashion Item ${newFashionItems.length + 1}`,
+          category: 'Custom',
+          source: 'upload' as const
+        });
+      }
+    }
+
+    // Append to existing items
+    setAllFashionItems(prev => [...prev, ...newFashionItems]);
+    setItemSelectionStates(prev => [...prev, ...new Array(newFashionItems.length).fill(true)]);
+    setFashionImages(prev => [...prev, ...files]);
   };
 
   const handleFashionItemSelect = (item: FashionItem) => {
     const isSelected = selectedFashionItems.some(selected => selected.id === item.id);
     let newSelectedItems: FashionItem[];
-    
-    if (isSelected) {
-      // Remove item if already selected
-      newSelectedItems = selectedFashionItems.filter(selected => selected.id !== item.id);
-    } else {
-      // Add item to selection
-      newSelectedItems = [...selectedFashionItems, item];
-    }
-    
-    setSelectedFashionItems(newSelectedItems);
-    
-    // Convert selected collection items to FashionItemInput format
-    const collectionFashionItems: FashionItemInput[] = newSelectedItems.map(collectionItem => ({
-      image: new File([], ''), // Will be fetched later
-      name: collectionItem.name,
-      category: collectionItem.category,
-      source: 'collection' as const,
-      collectionId: collectionItem.id
-    }));
-    
-    setAllFashionItems(collectionFashionItems);
-    setItemSelectionStates(new Array(collectionFashionItems.length).fill(true)); // Select all by default
-    setFashionImages([]); // Clear custom uploads
-    if (newSelectedItems.length > 0) setCurrentStep(3);
-  };
 
-  const handleBrowseCollection = () => {
-    // Scroll to fashion collection
-    const collectionElement = document.getElementById('fashion-collection');
-    collectionElement?.scrollIntoView({ behavior: 'smooth' });
+    if (isSelected) {
+      // Deselect: remove from both lists
+      newSelectedItems = selectedFashionItems.filter(selected => selected.id !== item.id);
+      const indexToRemove = allFashionItems.findIndex(fi => fi.collectionId === item.id);
+      if (indexToRemove !== -1) {
+        setAllFashionItems(prev => prev.filter((_, i) => i !== indexToRemove));
+        setItemSelectionStates(prev => prev.filter((_, i) => i !== indexToRemove));
+      }
+    } else {
+      // Select: add to both lists
+      newSelectedItems = [...selectedFashionItems, item];
+      const newItem: FashionItemInput = {
+        image: new File([], ''),
+        name: item.name,
+        category: item.category,
+        source: 'collection' as const,
+        collectionId: item.id
+      };
+      setAllFashionItems(prev => [...prev, newItem]);
+      setItemSelectionStates(prev => [...prev, true]);
+    }
+
+    setSelectedFashionItems(newSelectedItems);
   };
 
   const handleResultsGenerated = (results: TryOnResult[]) => {
-    // For progressive layering, we only care about the final result
     setLatestResults(results.length > 0 ? [results[results.length - 1]] : []);
   };
 
@@ -171,21 +180,22 @@ function Dashboard() {
   };
 
   const handleItemRemove = (index: number) => {
+    const removedItem = allFashionItems[index];
+
+    // Remove from all fashion items
     const newFashionItems = allFashionItems.filter((_, i) => i !== index);
     const newSelectionStates = itemSelectionStates.filter((_, i) => i !== index);
     setAllFashionItems(newFashionItems);
     setItemSelectionStates(newSelectionStates);
-    
-    // If removing from collection items, also update selectedFashionItems
-    if (allFashionItems.length > 0 && allFashionItems[0].source === 'collection') {
-      const newSelectedItems = selectedFashionItems.filter((_, i) => i !== index);
-      setSelectedFashionItems(newSelectedItems);
+
+    // If it was a collection item, remove from selectedFashionItems
+    if (removedItem.source === 'collection' && removedItem.collectionId) {
+      setSelectedFashionItems(prev => prev.filter(item => item.id !== removedItem.collectionId));
     }
-    
-    // If removing from uploaded items, also update fashionImages
-    if (allFashionItems.length > 0 && allFashionItems[0].source === 'upload') {
-      const newFashionImages = fashionImages.filter((_, i) => i !== index);
-      setFashionImages(newFashionImages);
+
+    // If it was an upload, remove from fashionImages
+    if (removedItem.source === 'upload') {
+      setFashionImages(prev => prev.filter((_, i) => i !== index));
     }
   };
 
@@ -203,15 +213,15 @@ function Dashboard() {
     return allFashionItems.filter((_, index) => itemSelectionStates[index]);
   };
 
-  const scrollToUpload = () => {
-    const uploadElement = document.getElementById('upload-section');
-    uploadElement?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToWorkspace = () => {
+    const workspaceElement = document.getElementById('try-on-workspace');
+    workspaceElement?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       {/* Hero Section */}
       <section className="gradient-bg py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -237,30 +247,28 @@ function Dashboard() {
 
             <h1 className="text-4xl md:text-6xl font-serif font-bold text-foreground mb-6">
               AI-Powered Fashion
-              <span className="text-primary"> Try-On Studio</span>
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"> Try-On</span>
             </h1>
-            <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-              Experience the future of fashion with progressive layering technology. 
-              Upload your photo and multiple garments to see complete outfits built layer by layer.
+            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Experience the future of fashion. Upload your photo, choose any outfit,
+              and see yourself in it instantly with our advanced AI technology.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                className="bg-primary text-primary-foreground px-8 py-4 text-lg font-medium hover:opacity-90"
-                onClick={scrollToUpload}
-                data-testid="button-start-try-on"
+              <Button
+                size="lg"
+                className="bg-primary text-primary-foreground hover:opacity-90 text-lg px-8"
+                onClick={scrollToWorkspace}
               >
-                Start Virtual Try-On
+                <i className="fas fa-sparkles mr-2"></i>
+                Try It Now
               </Button>
-              <Button 
-                variant="outline" 
-                className="px-8 py-4 text-lg font-medium"
-                onClick={() => {
-                  const galleryElement = document.getElementById('results-gallery');
-                  galleryElement?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                data-testid="button-view-examples"
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground text-lg px-8"
               >
-                View Examples
+                <i className="fas fa-play mr-2"></i>
+                Watch Demo
               </Button>
             </div>
           </div>
@@ -268,64 +276,65 @@ function Dashboard() {
       </section>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        
-        {/* Step Indicator */}
-        <div className="flex items-center justify-center mb-12">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center">
-              <div className={`w-8 h-8 ${currentStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'} rounded-full flex items-center justify-center text-sm font-medium`}>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* How It Works */}
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-serif font-semibold text-foreground mb-4">How It Works</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Three simple steps to see yourself in any outfit
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <div className="text-center space-y-4 p-6 bg-card rounded-xl border border-border">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <i className="fas fa-camera text-primary text-2xl"></i>
+            </div>
+            <div>
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-semibold mb-2">
                 1
-              </div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
-                Upload Model
               </span>
+              <h3 className="text-lg font-medium text-foreground">Upload Your Photo</h3>
+              <p className="text-sm text-muted-foreground">
+                Take or upload a clear photo of yourself
+              </p>
             </div>
-            <div className="w-8 h-px bg-border"></div>
-            <div className="flex items-center">
-              <div className={`w-8 h-8 ${currentStep >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'} rounded-full flex items-center justify-center text-sm font-medium`}>
+          </div>
+
+          <div className="text-center space-y-4 p-6 bg-card rounded-xl border border-border">
+            <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto">
+              <i className="fas fa-tshirt text-accent text-2xl"></i>
+            </div>
+            <div>
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-semibold mb-2">
                 2
-              </div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 2 ? 'text-primary' : 'text-muted-foreground'}`}>
-                Select Fashion
               </span>
+              <h3 className="text-lg font-medium text-foreground">Choose Fashion Items</h3>
+              <p className="text-sm text-muted-foreground">
+                Upload items or browse our curated collection
+              </p>
             </div>
-            <div className="w-8 h-px bg-border"></div>
-            <div className="flex items-center">
-              <div className={`w-8 h-8 ${currentStep >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'} rounded-full flex items-center justify-center text-sm font-medium`}>
+          </div>
+
+          <div className="text-center space-y-4 p-6 bg-card rounded-xl border border-border">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <i className="fas fa-magic text-primary text-2xl"></i>
+            </div>
+            <div>
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-semibold mb-2">
                 3
-              </div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 3 ? 'text-primary' : 'text-muted-foreground'}`}>
-                Generate
               </span>
+              <h3 className="text-lg font-medium text-foreground">See The Magic</h3>
+              <p className="text-sm text-muted-foreground">
+                Our AI generates your new look instantly
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Upload Section */}
-        <div id="upload-section" className="grid lg:grid-cols-2 gap-12 mb-16">
-          <ModelUpload 
-            onImageSelect={handleModelImageSelect}
-            selectedImage={modelImage}
-          />
-          <FashionUpload 
-            onImagesSelect={handleFashionImagesSelect}
-            selectedImages={fashionImages}
-            onBrowseCollection={handleBrowseCollection}
-          />
-        </div>
-
-        {/* Fashion Collection */}
-        <div id="fashion-collection">
-          <FashionCollection 
-            onItemSelect={handleFashionItemSelect}
-            selectedItems={selectedFashionItems}
-          />
-        </div>
-
-        {/* Try-On Workspace */}
+        {/* Consolidated Try-On Workspace */}
         <div id="try-on-workspace">
-          <TryOnWorkspace 
+          <TryOnWorkspace
             modelImage={modelImage}
             allFashionItems={allFashionItems}
             selectedFashionItems={selectedFashionItems}
@@ -340,6 +349,9 @@ function Dashboard() {
             getSelectedFashionItems={getSelectedFashionItems}
             isGenerating={isGenerating}
             generationProgress={generationProgress}
+            onModelImageSelect={handleModelImageSelect}
+            onFashionImagesSelect={handleFashionImagesSelect}
+            onFashionItemSelect={handleFashionItemSelect}
           />
         </div>
 
@@ -363,7 +375,7 @@ function Dashboard() {
                 The future of fashion try-on, powered by cutting-edge AI technology.
               </p>
             </div>
-            
+
             <div className="space-y-4">
               <h3 className="font-medium text-foreground">Product</h3>
               <div className="space-y-2 text-sm">
@@ -372,7 +384,7 @@ function Dashboard() {
                 <a href="#" className="text-muted-foreground hover:text-foreground transition-colors block">API Access</a>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <h3 className="font-medium text-foreground">Company</h3>
               <div className="space-y-2 text-sm">
@@ -381,7 +393,7 @@ function Dashboard() {
                 <a href="#" className="text-muted-foreground hover:text-foreground transition-colors block">Careers</a>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <h3 className="font-medium text-foreground">Support</h3>
               <div className="space-y-2 text-sm">
@@ -391,7 +403,7 @@ function Dashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="border-t border-border mt-8 pt-8 text-center">
             <p className="text-sm text-muted-foreground">
               © 2025 FashionMirror. All rights reserved. Powered by Google Gemini 2.5 Flash Image.

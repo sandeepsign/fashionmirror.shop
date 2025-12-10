@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, FashionItemInput } from "@/lib/api";
 import { FashionItem, TryOnResult } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { Upload, Image, Sparkles, Download, Plus, Trash2, X, ChevronLeft, ChevronRight, Palette, Check, Clock, Loader2, ClipboardPaste, BookmarkPlus } from "lucide-react";
 
 interface TryOnWorkspaceProps {
   modelImage: File | null;
@@ -21,10 +23,23 @@ interface TryOnWorkspaceProps {
   getSelectedFashionItems: () => FashionItemInput[];
   isGenerating: boolean;
   generationProgress: { completed: number; total: number };
+  // New props for integrated upload
+  onModelImageSelect: (file: File | null) => void;
+  onFashionImagesSelect: (files: File[]) => void;
+  onFashionItemSelect: (item: FashionItem) => void;
 }
 
-export default function TryOnWorkspace({ 
-  modelImage, 
+const categories = [
+  { id: "all", label: "All" },
+  { id: "professional", label: "Professional" },
+  { id: "formal", label: "Formal" },
+  { id: "casual", label: "Casual" },
+  { id: "accessories", label: "Accessories" },
+  { id: "footwear", label: "Footwear" }
+];
+
+export default function TryOnWorkspace({
+  modelImage,
   allFashionItems,
   selectedFashionItems,
   itemSelectionStates,
@@ -37,16 +52,39 @@ export default function TryOnWorkspace({
   onItemSelectionToggle,
   getSelectedFashionItems,
   isGenerating,
-  generationProgress
+  generationProgress,
+  onModelImageSelect,
+  onFashionImagesSelect,
+  onFashionItemSelect
 }: TryOnWorkspaceProps) {
   const [modelImageUrl, setModelImageUrl] = useState<string | null>(null);
   const [resultImageUrls, setResultImageUrls] = useState<string[]>([]);
   const [currentGeneratingIndex, setCurrentGeneratingIndex] = useState<number>(-1);
-  const [currentViewingStep, setCurrentViewingStep] = useState(0); // Track which step image is being viewed
-  const [showStatusView, setShowStatusView] = useState(false); // Track whether to show status view
-  const [textPrompt, setTextPrompt] = useState(''); // User's creative text prompt
+  const [currentViewingStep, setCurrentViewingStep] = useState(0);
+  const [showStatusView, setShowStatusView] = useState(false);
+  const [textPrompt, setTextPrompt] = useState('');
+  const [showCollectionBrowser, setShowCollectionBrowser] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [modelDragActive, setModelDragActive] = useState(false);
+  const [fashionDragActive, setFashionDragActive] = useState(false);
+
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const modelInputRef = useRef<HTMLInputElement>(null);
+  const fashionInputRef = useRef<HTMLInputElement>(null);
+  const fashionUploadRef = useRef<HTMLDivElement>(null);
+
+  // Fashion collection query
+  const { data: fashionCollection } = useQuery({
+    queryKey: ["/api/fashion-items", user?.id],
+    queryFn: () => apiClient.getFashionItems(),
+  });
+
+  const filteredCollection = fashionCollection?.filter(item =>
+    activeCategory === "all" || item.category.toLowerCase() === activeCategory
+  ) || [];
 
   // Create preview URL for model image
   useEffect(() => {
@@ -59,36 +97,230 @@ export default function TryOnWorkspace({
     }
   }, [modelImage]);
 
-  // Reset status view when fashion items change (new items added/removed)
+  // Reset status view when fashion items change
   useEffect(() => {
     if (allFashionItems.length > 0) {
-      setShowStatusView(false); // Reset status view when items change
+      setShowStatusView(false);
     }
   }, [allFashionItems.length]);
 
+  // Model upload handlers
+  const handleModelDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setModelDragActive(true);
+    } else if (e.type === "dragleave") {
+      setModelDragActive(false);
+    }
+  };
+
+  const handleModelDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setModelDragActive(false);
+    const files = e.dataTransfer.files;
+    if (files && files[0] && files[0].type.startsWith('image/')) {
+      onModelImageSelect(files[0]);
+    }
+  };
+
+  const handleModelFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      onModelImageSelect(files[0]);
+    }
+  };
+
+  const handleModelClick = () => {
+    modelInputRef.current?.click();
+  };
+
+  const handleChangeModel = () => {
+    onModelImageSelect(null);
+    if (modelInputRef.current) {
+      modelInputRef.current.value = '';
+    }
+  };
+
+  // Fashion upload handlers
+  const handleFashionDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setFashionDragActive(true);
+    } else if (e.type === "dragleave") {
+      setFashionDragActive(false);
+    }
+  };
+
+  const handleFashionDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFashionDragActive(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await addFashionImages(Array.from(files));
+    }
+  };
+
+  const addFashionImages = useCallback(async (newFiles: File[]) => {
+    const imageFiles = newFiles.filter(file => file.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      toast({
+        title: "No images found",
+        description: "Please select valid image files",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Analyze each image and add to the list
+    for (const file of imageFiles) {
+      try {
+        const analysis = await apiClient.analyzeFashionImage(file);
+        const newItem: FashionItemInput = {
+          image: file,
+          name: analysis.name,
+          category: analysis.category,
+          source: 'upload' as const
+        };
+        // We need to trigger the parent to add this item
+        onFashionImagesSelect([...imageFiles]);
+      } catch (error) {
+        console.error('Failed to analyze image:', error);
+      }
+    }
+
+    toast({
+      title: "Images added!",
+      description: `Added ${imageFiles.length} fashion item${imageFiles.length > 1 ? 's' : ''}`,
+    });
+  }, [onFashionImagesSelect, toast]);
+
+  const handleFashionFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      onFashionImagesSelect(Array.from(files));
+    }
+    if (fashionInputRef.current) {
+      fashionInputRef.current.value = '';
+    }
+  };
+
+  const handleFashionClick = () => {
+    fashionInputRef.current?.click();
+  };
+
+  // Paste handler - directly reads from clipboard
+  const handlePasteFromClipboard = useCallback(async () => {
+    try {
+      // Check if Clipboard API is available
+      if (!navigator.clipboard || !navigator.clipboard.read) {
+        toast({
+          title: "Clipboard not supported",
+          description: "Your browser doesn't support clipboard access. Try using Ctrl+V / Cmd+V instead.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const clipboardItems = await navigator.clipboard.read();
+      const imageFiles: File[] = [];
+
+      for (const clipboardItem of clipboardItems) {
+        // Check if any type is an image
+        const imageType = clipboardItem.types.find(type => type.startsWith('image/'));
+
+        if (imageType) {
+          const blob = await clipboardItem.getType(imageType);
+          const timestamp = Date.now();
+          const extension = imageType.split('/')[1] || 'png';
+          const pastedFile = new File([blob], `pasted-fashion-${timestamp}.${extension}`, {
+            type: imageType
+          });
+          imageFiles.push(pastedFile);
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        onFashionImagesSelect(imageFiles);
+        toast({
+          title: "Image pasted!",
+          description: `Added ${imageFiles.length} fashion item${imageFiles.length > 1 ? 's' : ''} from clipboard`,
+        });
+      } else {
+        toast({
+          title: "No image found",
+          description: "Clipboard doesn't contain an image. Copy an image first, then click Paste Image.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      // Handle permission denied or other errors
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        toast({
+          title: "Permission denied",
+          description: "Please allow clipboard access or use Ctrl+V / Cmd+V to paste.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "No image found",
+          description: "Clipboard doesn't contain an image. Copy an image first, then click Paste Image.",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [onFashionImagesSelect, toast]);
+
+  // Save to collection handler
+  const handleSaveToCollection = useCallback(async (index: number) => {
+    const item = allFashionItems[index];
+    if (!item || item.source !== 'upload') return;
+
+    try {
+      await apiClient.saveFashionItem(item.image, item.name, item.category);
+
+      // Invalidate and refetch the fashion items cache
+      queryClient.invalidateQueries({ queryKey: ["/api/fashion-items", user?.id] });
+
+      toast({
+        title: "Added to Collection!",
+        description: `${item.name} has been added to your fashion collection.`,
+      });
+    } catch (error) {
+      console.error('Failed to save to collection:', error);
+      toast({
+        title: "Save Failed",
+        description: "Could not add the item to your collection. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [allFashionItems, queryClient, user?.id, toast]);
+
+  // Generation mutation
   const generateSimultaneousTryOnMutation = useMutation({
     mutationFn: async () => {
       const selectedItems = getSelectedFashionItems();
-      
+
       if (!modelImage || selectedItems.length === 0) {
         throw new Error("Model image and at least one selected fashion item are required");
       }
 
-      // Prepare fashion items with actual image files
       const fashionItemsWithImages: FashionItemInput[] = [];
-      
+
       for (let i = 0; i < selectedItems.length; i++) {
         const item = selectedItems[i];
         let fashionImageFile = item.image;
-        
-        // If it's from collection, fetch the image
+
         if (item.source === 'collection' && item.collectionId) {
           const collectionItem = await apiClient.getFashionItem(item.collectionId);
           const response = await fetch(collectionItem.imageUrl);
           const blob = await response.blob();
           fashionImageFile = new File([blob], `${item.name}.jpg`, { type: 'image/jpeg' });
         }
-        
+
         fashionItemsWithImages.push({
           ...item,
           image: fashionImageFile
@@ -99,21 +331,17 @@ export default function TryOnWorkspace({
     },
     onSuccess: async ({ fashionItems }) => {
       onGenerationStart();
-      setShowStatusView(true); // Show status view when generation starts
+      setShowStatusView(true);
       onGenerationProgress(0, fashionItems.length);
-      
+
       try {
         const stepResults: string[] = [];
         let currentModelImage = modelImage!;
-        
-        // Generate each step sequentially
+
         for (let i = 0; i < fashionItems.length; i++) {
           const item = fashionItems[i];
           setCurrentGeneratingIndex(i);
-          
-          console.log(`Starting step ${i + 1}: ${item.name}`);
-          
-          // Generate this step using the result from the previous step as input
+
           const stepResponse = await apiClient.generateProgressiveStep({
             modelImage: currentModelImage,
             fashionImage: item.image,
@@ -122,45 +350,34 @@ export default function TryOnWorkspace({
             stepNumber: i + 1,
             textPrompt: textPrompt.trim() || undefined
           });
-          
+
           if (!stepResponse.success) {
             throw new Error(stepResponse.error || `Failed to generate step ${i + 1}`);
           }
-          
-          // Use the filesystem URL directly from server response
+
           const stepImageUrl = stepResponse.resultImageUrl;
           stepResults.push(stepImageUrl);
-          
-          // Update UI to show current step result
           setResultImageUrls([...stepResults]);
-          
-          // Auto-navigate to the latest generated step
           setCurrentViewingStep(stepResults.length - 1);
-          
-          // Create file from filesystem URL for next step
+
           if (i < fashionItems.length - 1) {
             const response = await fetch(stepImageUrl);
             const blob = await response.blob();
             currentModelImage = new File([blob], `step-${i + 1}-result.jpg`, { type: 'image/jpeg' });
           }
-          
+
           onGenerationProgress(i + 1, fashionItems.length);
-          
-          console.log(`Completed step ${i + 1}: ${item.name}`);
         }
-        
-        // Save final result to database using the progressive API
+
         const finalImageBlob = await fetch(stepResults[stepResults.length - 1]).then(r => r.blob());
         const finalImageFile = new File([finalImageBlob], 'final-result.jpg', { type: 'image/jpeg' });
-        
-        // Use the progressive API to properly save the result
+
         const savedResult = await apiClient.generateProgressiveTryOn({
           modelImage: modelImage!,
           fashionItems: fashionItems,
           textPrompt: textPrompt.trim() || undefined
         });
 
-        // Create result object from saved result, preserving server metadata
         const finalResult = {
           id: savedResult.result?.id || `progressive-${Date.now()}`,
           createdAt: new Date(),
@@ -171,7 +388,6 @@ export default function TryOnWorkspace({
           fashionItemName: savedResult.result?.fashionItemName || fashionItems.map(item => item.name).join(' + '),
           fashionCategory: savedResult.result?.fashionCategory || fashionItems.map(item => item.category).join(', '),
           metadata: {
-            // Merge server metadata with local metadata, preserving textPrompt
             ...(savedResult.result?.metadata || {}),
             timestamp: new Date().toISOString(),
             generationType: 'progressive-step-by-step',
@@ -184,17 +400,15 @@ export default function TryOnWorkspace({
             }))
           }
         };
-        
+
         onResultsGenerated([finalResult]);
-        
-        // Set to final result when generation is complete
         setCurrentViewingStep(stepResults.length - 1);
-        
+
         toast({
           title: "Try-on complete!",
-          description: `Successfully applied ${fashionItems.length} fashion item${fashionItems.length > 1 ? 's' : ''} progressively in ${stepResults.length} steps.`,
+          description: `Successfully applied ${fashionItems.length} fashion item${fashionItems.length > 1 ? 's' : ''}.`,
         });
-        
+
       } catch (error) {
         console.error('Failed to generate progressive try-on:', error);
         toast({
@@ -203,10 +417,9 @@ export default function TryOnWorkspace({
           variant: "destructive",
         });
       }
-      
+
       setCurrentGeneratingIndex(-1);
       onGenerationEnd();
-      // Keep showStatusView true after completion - don't reset it here
     },
     onError: (error) => {
       console.error("Batch try-on generation failed:", error);
@@ -223,11 +436,10 @@ export default function TryOnWorkspace({
   const handleGenerate = () => {
     setResultImageUrls([]);
     setCurrentViewingStep(0);
-    setShowStatusView(false); // Reset status view when Generate is clicked
+    setShowStatusView(false);
     generateSimultaneousTryOnMutation.mutate();
   };
 
-  // Navigation functions for step images
   const goToPreviousStep = () => {
     setCurrentViewingStep(prev => Math.max(0, prev - 1));
   };
@@ -248,419 +460,471 @@ export default function TryOnWorkspace({
     }
   };
 
-  // Check if we can generate based on model image and selected items
   const hasSelectedItems = selectedItemsCount > 0;
 
   return (
     <section className="mb-16">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-serif font-semibold text-foreground mb-2">AI Try-On Studio</h2>
-        <p className="text-muted-foreground">See how your selected fashion items look on you</p>
-      </div>
-      
-      <div className="bg-card rounded-2xl p-8 border border-border">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Original Photo */}
+      {/* Collection Browser Modal */}
+      <Dialog open={showCollectionBrowser} onOpenChange={setShowCollectionBrowser}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden p-0">
+          <DialogHeader className="p-4 border-b border-border">
+            <DialogTitle>Browse Collection</DialogTitle>
+          </DialogHeader>
+
+          {/* Category filters */}
+          <div className="flex flex-wrap gap-2 p-4 border-b border-border">
+            {categories.map((category) => (
+              <Button
+                key={category.id}
+                variant={activeCategory === category.id ? "default" : "secondary"}
+                size="sm"
+                onClick={() => setActiveCategory(category.id)}
+                className="rounded-full"
+              >
+                {category.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Collection grid */}
+          <div className="p-4 overflow-y-auto max-h-[50vh]">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredCollection.map((item) => {
+                const isSelected = selectedFashionItems.some(s => s.id === item.id);
+                return (
+                  <div
+                    key={item.id}
+                    className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+                      isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-primary/50'
+                    }`}
+                    onClick={() => {
+                      onFashionItemSelect(item);
+                    }}
+                  >
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-full h-32 object-cover"
+                    />
+                    <div className="p-2 bg-background/80 backdrop-blur-sm">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.category}</p>
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                        <Check className="h-3 w-3" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {filteredCollection.length === 0 && (
+              <p className="text-center text-muted-foreground py-8">No items in this category</p>
+            )}
+          </div>
+
+          <div className="p-4 border-t border-border flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowCollectionBrowser(false)}>
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="bg-gray-900 [.dashboard-light_&]:bg-gray-100 rounded-2xl p-6 border border-white/10 [.dashboard-light_&]:border-gray-300">
+        {/* Main workspace layout */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-6">
+          {/* Left: Model Photo Upload */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground text-center">Original Photo</h3>
-            <div className="h-[500px] bg-muted rounded-xl flex items-center justify-center">
+            <h3 className="text-lg font-medium text-white [.dashboard-light_&]:text-gray-900 flex items-center gap-2">
+              <Image className="h-5 w-5 text-primary" />
+              Model Photo
+            </h3>
+
+            <input
+              ref={modelInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={handleModelFileSelect}
+            />
+
+            <div
+              className={`relative h-[400px] rounded-xl border-2 border-dashed transition-all cursor-pointer overflow-hidden ${
+                modelDragActive
+                  ? 'border-primary bg-primary/5'
+                  : modelImageUrl
+                    ? 'border-white/20 [.dashboard-light_&]:border-gray-300 bg-white/5 [.dashboard-light_&]:bg-gray-200/50'
+                    : 'border-white/20 [.dashboard-light_&]:border-gray-300 hover:border-primary/50 bg-white/5 [.dashboard-light_&]:bg-gray-200/50'
+              }`}
+              onDragEnter={handleModelDrag}
+              onDragLeave={handleModelDrag}
+              onDragOver={handleModelDrag}
+              onDrop={handleModelDrop}
+              onClick={!modelImageUrl ? handleModelClick : undefined}
+            >
               {modelImageUrl ? (
-                <img 
-                  src={modelImageUrl} 
-                  alt="Original model photo" 
-                  className="w-full h-full object-contain rounded-xl"
-                  data-testid="img-original-photo"
-                />
+                <>
+                  <img
+                    src={modelImageUrl}
+                    alt="Model photo"
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-white font-medium flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-400" />
+                        Model Ready
+                      </span>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleChangeModel();
+                        }}
+                        className="bg-white/20 hover:bg-white/30 text-white border-0"
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  </div>
+                </>
               ) : (
-                <div className="text-center space-y-2">
-                  <i className="fas fa-user text-muted-foreground text-4xl"></i>
-                  <p className="text-sm text-muted-foreground" data-testid="text-no-model">
-                    Upload a model photo
-                  </p>
+                <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                    <Upload className="h-8 w-8 text-white/70 [.dashboard-light_&]:text-gray-600" />
+                  </div>
+                  <h4 className="font-medium text-white [.dashboard-light_&]:text-gray-900 mb-2">Drop your photo here</h4>
+                  <p className="text-sm text-white/60 [.dashboard-light_&]:text-gray-500 mb-4">or click to browse</p>
+                  <Button size="sm" className="bg-white [.dashboard-light_&]:bg-gray-900 text-gray-900 [.dashboard-light_&]:text-white hover:bg-white/90 [.dashboard-light_&]:hover:bg-gray-800">
+                    Choose Photo
+                  </Button>
+                  <p className="text-xs text-white/40 [.dashboard-light_&]:text-gray-400 mt-3">JPG, PNG up to 10MB</p>
                 </div>
               )}
             </div>
           </div>
-          
-          {/* Processing/Results */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground text-center">
-              {isGenerating ? "AI Processing" : showStatusView ? "Generation Complete" : "Fashion Items"}
-            </h3>
-            <div className="h-[500px] bg-muted rounded-xl flex flex-col relative">
-              {isGenerating || showStatusView ? (
-                <div className="space-y-4 p-4 h-full">
-                  {/* Header */}
-                  <div className="text-center space-y-2">
-                    {isGenerating && <div className="spinner mx-auto"></div>}
-                    <p className="text-sm text-muted-foreground" data-testid="text-generating">
-                      {isGenerating ? "Generating try-on results..." : "All items successfully applied!"}
-                    </p>
-                    {isGenerating && (
-                      <p className="text-xs text-muted-foreground opacity-75">
-                        Step {Math.min(generationProgress.completed + (isGenerating ? 1 : 0), selectedItemsCount)} of {selectedItemsCount}
-                      </p>
-                    )}
-                  </div>
 
-                  {/* Fashion Items Status List */}
-                  <div className="space-y-2 flex-1 overflow-y-auto">
-                    {allFashionItems.map((item, index) => {
-                      const isCompleted = showStatusView && !isGenerating ? true : index < generationProgress.completed;
-                      const isProcessing = isGenerating && index === currentGeneratingIndex;
-                      const isPending = isGenerating && index > currentGeneratingIndex;
-                      
-                      return (
-                        <div 
-                          key={index}
-                          className={`fashion-status-item flex items-center gap-3 p-3 rounded-lg border transition-all duration-500 ${
-                            isCompleted ? 'bg-green-50 border-green-200' :
-                            isProcessing ? 'bg-blue-50 border-blue-200 animate-pulse' :
-                            'bg-gray-50 border-gray-200'
-                          }`}
-                          data-testid={`status-fashion-item-${index}`}
-                        >
-                          {/* Status Icon */}
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            isCompleted ? 'bg-green-500' :
-                            isProcessing ? 'bg-blue-500' :
-                            'bg-gray-300'
-                          }`}>
-                            {isCompleted ? (
-                              <i className="fas fa-check text-white text-sm"></i>
-                            ) : isProcessing ? (
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                              <i className="fas fa-clock text-white text-sm"></i>
-                            )}
-                          </div>
+          {/* Right: Fashion Items */}
+          <div className="space-y-4" ref={fashionUploadRef} tabIndex={0}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-white [.dashboard-light_&]:text-gray-900 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-accent" />
+                Fashion Items
+                {allFashionItems.length > 0 && (
+                  <span className="text-sm text-white/60 [.dashboard-light_&]:text-gray-500">({allFashionItems.length})</span>
+                )}
+              </h3>
+            </div>
 
-                          {/* Fashion Item Image */}
-                          <img 
-                            src={item.source === 'upload' ? 
-                              URL.createObjectURL(item.image) : 
-                              item.source === 'collection' && selectedFashionItems[index] ? 
-                                selectedFashionItems[index].imageUrl : 
-                                '/placeholder-fashion.jpg'
-                            } 
-                            alt={item.name} 
-                            className={`w-12 h-12 object-cover rounded-md flex-shrink-0 transition-all duration-300 ${
-                              isProcessing ? 'ring-2 ring-blue-400 ring-offset-1' : ''
-                            }`}
-                            data-testid={`img-status-fashion-item-${index}`}
-                          />
+            <input
+              ref={fashionInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              multiple
+              onChange={handleFashionFileSelect}
+            />
 
-                          {/* Item Details */}
-                          <div className="flex-1 min-w-0">
-                            <h4 className={`font-medium text-sm truncate transition-colors duration-300 ${
-                              isCompleted ? 'text-green-700' :
-                              isProcessing ? 'text-blue-700' :
-                              'text-gray-600'
-                            }`}>
-                              {item.name}
-                            </h4>
-                            <p className={`text-xs transition-colors duration-300 ${
-                              isCompleted ? 'text-green-600' :
-                              isProcessing ? 'text-blue-600' :
-                              'text-gray-500'
-                            }`}>
-                              {item.category}
-                            </p>
-                          </div>
+            <div className={`h-[400px] rounded-xl border-2 border-dashed transition-all overflow-hidden ${
+              fashionDragActive ? 'border-accent bg-accent/5' : 'border-white/20 [.dashboard-light_&]:border-gray-300 bg-white/5 [.dashboard-light_&]:bg-gray-200/50'
+            }`}>
+              {/* Add buttons bar */}
+              <div className="flex items-center gap-2 p-3 border-b border-white/10 [.dashboard-light_&]:border-gray-300 bg-white/5 [.dashboard-light_&]:bg-gray-100">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleFashionClick}
+                  className="flex-1 border-white/20 [.dashboard-light_&]:border-gray-300 [.dashboard-light_&]:bg-white text-white [.dashboard-light_&]:text-gray-700 hover:bg-white/10 [.dashboard-light_&]:hover:bg-gray-100"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handlePasteFromClipboard}
+                  className="flex-1 border-white/20 [.dashboard-light_&]:border-gray-300 [.dashboard-light_&]:bg-white text-white [.dashboard-light_&]:text-gray-700 hover:bg-white/10 [.dashboard-light_&]:hover:bg-gray-100"
+                >
+                  <ClipboardPaste className="h-4 w-4 mr-2" />
+                  Paste Image
+                </Button>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => setShowCollectionBrowser(true)}
+                  className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Collection
+                </Button>
+              </div>
 
-                          {/* Status Text */}
-                          <div className="text-right">
-                            <p className={`text-xs font-medium transition-colors duration-300 ${
-                              isCompleted ? 'text-green-700' :
-                              isProcessing ? 'text-blue-700' :
-                              'text-gray-500'
-                            }`}>
-                              {isCompleted ? 'Applied' :
-                               isProcessing ? 'Processing...' :
-                               'Waiting'}
-                            </p>
-                            {isProcessing && (
-                              <p className="text-xs text-blue-600 animate-pulse">
-                                AI Processing
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="space-y-2">
-                    <div className="w-full h-2 bg-border rounded-full">
-                      <div 
-                        className="h-2 bg-primary rounded-full transition-all duration-300" 
-                        style={{ 
-                          width: generationProgress.total > 0 ? 
-                            `${(generationProgress.completed / generationProgress.total) * 100}%` : '0%' 
-                        }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-muted-foreground text-center">
-                      {isGenerating ? "Processing with Gemini 2.5 Flash Image" : "Processing Complete"}
-                    </p>
-                    {!isGenerating && showStatusView && (
-                      <div className="text-center mt-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs px-4 py-1 h-7 border-muted-foreground/20 hover:bg-muted"
-                          onClick={() => setShowStatusView(false)}
-                          data-testid="button-clear-status"
-                        >
-                          <i className="fas fa-times mr-1 text-[10px]"></i>
-                          Clear List
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : allFashionItems.length > 0 ? (
-                <div className="flex flex-col h-full">
-                  <div className="flex-1 p-4 overflow-y-auto space-y-2">
+              {/* Fashion items list or drop zone */}
+              <div
+                className="h-[calc(100%-52px)] overflow-y-auto"
+                onDragEnter={handleFashionDrag}
+                onDragLeave={handleFashionDrag}
+                onDragOver={handleFashionDrag}
+                onDrop={handleFashionDrop}
+              >
+                {allFashionItems.length > 0 ? (
+                  <div className="p-3 space-y-2">
                     {allFashionItems.map((item, index) => (
-                      <div 
-                        key={index} 
-                        className="fashion-item-row flex items-center gap-3 p-3 bg-white rounded-lg border border-border hover:bg-muted cursor-pointer transition-all duration-200 group"
-                        onClick={() => onItemRemove(index)}
-                        data-testid={`row-fashion-item-${index}`}
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 bg-white/5 [.dashboard-light_&]:bg-white rounded-lg border border-white/10 [.dashboard-light_&]:border-gray-200 hover:border-primary/50 transition-all group"
                       >
-                        <img 
-                          src={item.source === 'upload' ? 
-                            URL.createObjectURL(item.image) : 
-                            item.source === 'collection' && selectedFashionItems[index] ? 
-                              selectedFashionItems[index].imageUrl : 
+                        <img
+                          src={item.source === 'upload' ?
+                            URL.createObjectURL(item.image) :
+                            item.source === 'collection' && selectedFashionItems[index] ?
+                              selectedFashionItems[index].imageUrl :
                               '/placeholder-fashion.jpg'
-                          } 
-                          alt={item.name} 
-                          className="w-12 h-12 object-cover rounded-md flex-shrink-0"
-                          data-testid={`img-fashion-item-${index}`}
+                          }
+                          alt={item.name}
+                          className="w-14 h-14 object-cover rounded-lg flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-foreground text-sm truncate group-hover:text-primary">
-                            {item.name}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {item.category}
-                          </p>
+                          <h4 className="font-medium text-white [.dashboard-light_&]:text-gray-900 text-sm truncate">{item.name}</h4>
+                          <p className="text-xs text-white/60 [.dashboard-light_&]:text-gray-500">{item.category}</p>
                         </div>
-                        <div className="flex items-center text-muted-foreground group-hover:text-destructive">
-                          <i className="fas fa-times text-sm"></i>
+                        <div className="flex items-center gap-1">
+                          {/* Add to Collection button - only for uploaded items */}
+                          {item.source === 'upload' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleSaveToCollection(index)}
+                              className="h-7 px-2 text-xs bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-indigo-500/10 [.dashboard-dark_&]:from-pink-500/20 [.dashboard-dark_&]:via-purple-500/20 [.dashboard-dark_&]:to-indigo-500/20 text-purple-600 [.dashboard-dark_&]:text-purple-300 border border-purple-200/50 [.dashboard-dark_&]:border-purple-500/30 hover:from-pink-500/30 hover:via-purple-500/30 hover:to-indigo-500/30 hover:border-purple-400 hover:shadow-[0_0_12px_rgba(168,85,247,0.4)] hover:scale-105 transition-all duration-200 flex items-center gap-1.5 rounded-full"
+                              title="Add to Collection"
+                            >
+                              <BookmarkPlus className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Add to Collection</span>
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onItemRemove(index)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
-                    <div className="text-center py-2">
-                      <p className="text-xs text-muted-foreground">
-                        Click any item to remove it from the selection
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Creative Instructions - Optional Field */}
-                  <div className="border-t border-border/20 p-4">
-                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <i className="fas fa-palette text-accent"></i>
-                        <h4 className="text-sm font-medium text-foreground">Additional Creative Control</h4>
-                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">Optional</span>
-                      </div>
-                      <div className="relative">
-                        <textarea
-                          value={textPrompt}
-                          onChange={(e) => setTextPrompt(e.target.value)}
-                          placeholder="e.g. Change pose to casual sitting, add elegant studio lighting, outdoor background..."
-                          className="w-full p-3 border border-border/50 rounded-lg bg-background/50 text-foreground placeholder:text-muted-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-                          rows={2}
-                          maxLength={500}
-                          data-testid="textarea-text-prompt"
-                        />
-                        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-                          {textPrompt.length}/500
-                        </div>
-                      </div>
-                      {textPrompt && (
-                        <div className="flex items-center text-xs text-accent/80 mt-2">
-                          <i className="fas fa-magic mr-1"></i>
-                          Creative instructions will guide the AI generation
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col h-full items-center justify-center space-y-2">
-                  <i className="fas fa-tshirt text-muted-foreground text-4xl"></i>
-                  <p className="text-sm text-muted-foreground" data-testid="text-no-fashion">
-                    Select fashion items
-                  </p>
-                  
-                  {/* Creative Instructions - Optional Field (empty state) */}
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="bg-accent/5 border border-accent/20 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <i className="fas fa-palette text-accent"></i>
-                        <h4 className="text-sm font-medium text-foreground">Additional Creative Control</h4>
-                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">Optional</span>
-                      </div>
-                      <div className="relative">
-                        <textarea
-                          value={textPrompt}
-                          onChange={(e) => setTextPrompt(e.target.value)}
-                          placeholder="e.g. Change pose to casual sitting, add elegant studio lighting, outdoor background..."
-                          className="w-full p-3 border border-border/50 rounded-lg bg-background/50 text-foreground placeholder:text-muted-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-                          rows={2}
-                          maxLength={500}
-                          data-testid="textarea-text-prompt"
-                        />
-                        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-                          {textPrompt.length}/500
-                        </div>
-                      </div>
-                      {textPrompt && (
-                        <div className="flex items-center text-xs text-accent/80 mt-2">
-                          <i className="fas fa-magic mr-1"></i>
-                          Creative instructions will guide the AI generation
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Progressive Try-On Results */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground text-center">
-              {isGenerating ? "Building Your Look..." : "Progressive Steps"}
-            </h3>
-            
-            <div className="relative">
-              {/* Single Image Display */}
-              <div className="h-[500px] bg-muted rounded-xl flex items-center justify-center">
-                {resultImageUrls.length > 0 ? (
-                  <div className="relative w-full h-full">
-                    <img 
-                      src={resultImageUrls[currentViewingStep] || resultImageUrls[resultImageUrls.length - 1]} 
-                      alt={`Step ${currentViewingStep + 1} result`} 
-                      className="w-full h-full object-contain rounded-xl"
-                      data-testid="img-progressive-result"
-                    />
-                    {isGenerating && (
-                      <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-xs font-medium">
-                        {generationProgress.completed}/{generationProgress.total} items
-                      </div>
-                    )}
-                    {!isGenerating && allFashionItems.length > 1 && (
-                      <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded-md text-xs">
-                        Wearing {allFashionItems.length} items
-                      </div>
-                    )}
                   </div>
                 ) : (
-                  <div className="text-center space-y-2">
-                    <i className="fas fa-magic text-muted-foreground text-4xl"></i>
-                    <p className="text-sm text-muted-foreground" data-testid="text-no-result">
-                      {(modelImage && selectedItemsCount > 0) ? "Ready to build your look" : "Waiting for inputs"}
-                    </p>
-                    {selectedItemsCount > 1 && modelImage && (
-                      <p className="text-xs text-muted-foreground">
-                        Will layer {selectedItemsCount} items progressively
-                      </p>
-                    )}
+                  <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                    <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-3">
+                      <Plus className="h-6 w-6 text-accent" />
+                    </div>
+                    <p className="text-sm text-white/60 [.dashboard-light_&]:text-gray-600 mb-1">No fashion items yet</p>
+                    <p className="text-xs text-white/40 [.dashboard-light_&]:text-gray-400">Upload, paste, or browse collection</p>
                   </div>
                 )}
               </div>
-
-              {/* Navigation Controls - Only show if multiple results exist */}
-              {resultImageUrls.length > 1 && (
-                <>
-                  {/* Left Arrow */}
-                  <button
-                    onClick={goToPreviousStep}
-                    disabled={currentViewingStep === 0}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                    data-testid="btn-previous-step"
-                  >
-                    <i className="fas fa-chevron-left text-sm"></i>
-                  </button>
-
-                  {/* Right Arrow */}
-                  <button
-                    onClick={goToNextStep}
-                    disabled={currentViewingStep === resultImageUrls.length - 1}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                    data-testid="btn-next-step"
-                  >
-                    <i className="fas fa-chevron-right text-sm"></i>
-                  </button>
-                </>
-              )}
             </div>
-
-            {/* Step Indicator */}
-            {resultImageUrls.length > 1 && (
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium text-foreground">
-                  Step {currentViewingStep + 1} of {resultImageUrls.length}
-                  {currentViewingStep === resultImageUrls.length - 1 && (
-                    <span className="ml-1 text-primary">(Final)</span>
-                  )}
-                </p>
-                
-                {/* Step Dots Indicator */}
-                <div className="flex justify-center space-x-2">
-                  {resultImageUrls.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentViewingStep(index)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        index === currentViewingStep
-                          ? 'bg-primary'
-                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                      }`}
-                      data-testid={`step-dot-${index + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
-        
-        
-        {/* Action Buttons */}
-        <div className="flex justify-center space-x-4 mt-8">
-          <Button 
-            className="bg-primary text-primary-foreground px-8 py-3 font-medium hover:opacity-90" 
+
+        {/* Creative Control */}
+        <div className="mb-6">
+          <div className="bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10 [.dashboard-dark_&]:from-purple-500/20 [.dashboard-dark_&]:via-pink-500/10 [.dashboard-dark_&]:to-indigo-500/20 border border-purple-300/30 [.dashboard-dark_&]:border-purple-500/30 rounded-xl p-4 backdrop-blur-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <Palette className="h-4 w-4 text-purple-600 [.dashboard-dark_&]:text-purple-400" />
+              <h4 className="text-sm font-semibold text-gray-800 [.dashboard-dark_&]:text-white">Creative Control</h4>
+              <span className="text-xs text-purple-600 [.dashboard-dark_&]:text-purple-300 bg-purple-100 [.dashboard-dark_&]:bg-purple-900/50 px-2 py-0.5 rounded-full font-medium">Optional</span>
+            </div>
+            <textarea
+              value={textPrompt}
+              onChange={(e) => setTextPrompt(e.target.value)}
+              placeholder="e.g. Change pose to casual sitting, add elegant studio lighting, outdoor background..."
+              className="w-full p-3 border border-purple-200 [.dashboard-dark_&]:border-purple-700/50 rounded-lg bg-white [.dashboard-dark_&]:bg-gray-900/90 text-gray-800 [.dashboard-dark_&]:text-gray-100 placeholder:text-gray-400 [.dashboard-dark_&]:placeholder:text-gray-500 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-400 [.dashboard-dark_&]:focus:border-purple-500 transition-all"
+              rows={2}
+              maxLength={500}
+            />
+            <div className="flex justify-end mt-1">
+              <span className="text-xs text-gray-500 [.dashboard-dark_&]:text-gray-400">{textPrompt.length}/500</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Generate Button */}
+        <div className="flex justify-center gap-4 mb-6">
+          <Button
+            className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white px-8 py-3 font-semibold hover:opacity-90 shadow-lg"
             onClick={handleGenerate}
             disabled={!modelImage || selectedItemsCount === 0 || isGenerating}
-            data-testid="button-generate-try-on"
           >
-            <i className="fas fa-magic mr-2"></i>
-            {isGenerating ? 
-              `Generating ${generationProgress.completed}/${generationProgress.total}...` : 
-              selectedItemsCount > 0 ?
-                `Generate with ${selectedItemsCount} ${selectedItemsCount === 1 ? 'Item' : 'Items'}` :
-                'Generate Progressive Look'
-            }
-          </Button>
-          <Button 
-            variant="outline" 
-            className="px-8 py-3 font-medium"
-            onClick={handleDownloadFinal}
-            disabled={resultImageUrls.length === 0}
-            data-testid="button-download-final"
-          >
-            <i className="fas fa-download mr-2"></i>
-            Download Final Result
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating magic {generationProgress.completed}/{generationProgress.total}...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Mirror.me
+              </>
+            )}
           </Button>
         </div>
+
+        {/* Results Area */}
+        {(isGenerating || resultImageUrls.length > 0 || showStatusView) && (
+          <div className="border-t border-gray-200 [.dashboard-dark_&]:border-white/10 pt-6">
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Progress/Status */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900 [.dashboard-dark_&]:text-white">
+                  {isGenerating ? "Crafting Your New Look..." : "Looking Fabulous!"}
+                </h3>
+
+                <div className="space-y-2">
+                  {allFashionItems.map((item, index) => {
+                    const isCompleted = showStatusView && !isGenerating ? true : index < generationProgress.completed;
+                    const isProcessing = isGenerating && index === currentGeneratingIndex;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                          isCompleted ? 'bg-green-50 [.dashboard-dark_&]:bg-green-900/20 border-green-200 [.dashboard-dark_&]:border-green-800' :
+                          isProcessing ? 'bg-blue-50 [.dashboard-dark_&]:bg-blue-900/20 border-blue-200 [.dashboard-dark_&]:border-blue-800 animate-pulse' :
+                          'bg-gray-100 [.dashboard-dark_&]:bg-white/5 border-gray-200 [.dashboard-dark_&]:border-white/10'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isCompleted ? 'bg-green-500' :
+                          isProcessing ? 'bg-blue-500' :
+                          'bg-muted-foreground/30'
+                        }`}>
+                          {isCompleted ? (
+                            <Check className="h-4 w-4 text-white" />
+                          ) : isProcessing ? (
+                            <Loader2 className="h-4 w-4 text-white animate-spin" />
+                          ) : (
+                            <Clock className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+
+                        <img
+                          src={item.source === 'upload' ?
+                            URL.createObjectURL(item.image) :
+                            item.source === 'collection' && selectedFashionItems[index] ?
+                              selectedFashionItems[index].imageUrl :
+                              '/placeholder-fashion.jpg'
+                          }
+                          alt={item.name}
+                          className="w-10 h-10 object-cover rounded-md flex-shrink-0"
+                        />
+
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate text-gray-900 [.dashboard-dark_&]:text-white">{item.name}</p>
+                          <p className="text-xs text-gray-500 [.dashboard-dark_&]:text-gray-400">{item.category}</p>
+                        </div>
+
+                        <span className={`text-xs font-medium ${
+                          isCompleted ? 'text-green-600 [.dashboard-dark_&]:text-green-400' :
+                          isProcessing ? 'text-blue-600 [.dashboard-dark_&]:text-blue-400' :
+                          'text-gray-500 [.dashboard-dark_&]:text-gray-400'
+                        }`}>
+                          {isCompleted ? 'Applied' : isProcessing ? 'Processing' : 'Waiting'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-2">
+                  <div className="w-full h-2 bg-gray-200 [.dashboard-dark_&]:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 transition-all duration-300"
+                      style={{
+                        width: generationProgress.total > 0 ?
+                          `${(generationProgress.completed / generationProgress.total) * 100}%` : '0%'
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500 [.dashboard-dark_&]:text-gray-400 text-center">
+                    {isGenerating ? "Hold tight, magic is happening..." : "You're going to love this!"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Result Preview */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900 [.dashboard-dark_&]:text-white">Result Preview</h3>
+
+                <div className="relative h-[350px] bg-gray-200 [.dashboard-dark_&]:bg-gray-800 rounded-xl overflow-hidden">
+                  {resultImageUrls.length > 0 ? (
+                    <>
+                      <img
+                        src={resultImageUrls[currentViewingStep]}
+                        alt={`Step ${currentViewingStep + 1} result`}
+                        className="w-full h-full object-contain"
+                      />
+
+                      {resultImageUrls.length > 1 && (
+                        <>
+                          <button
+                            onClick={goToPreviousStep}
+                            disabled={currentViewingStep === 0}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full disabled:opacity-30 transition-all"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={goToNextStep}
+                            disabled={currentViewingStep === resultImageUrls.length - 1}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full disabled:opacity-30 transition-all"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                        {resultImageUrls.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setCurrentViewingStep(index)}
+                            className={`w-2 h-2 rounded-full transition-all ${
+                              index === currentViewingStep ? 'bg-primary' : 'bg-white/50'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <Sparkles className="h-8 w-8 text-gray-400 [.dashboard-dark_&]:text-gray-500 mb-2" />
+                      <p className="text-sm text-gray-500 [.dashboard-dark_&]:text-gray-400">Result will appear here</p>
+                    </div>
+                  )}
+                </div>
+
+                {resultImageUrls.length > 0 && (
+                  <div className="flex justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadFinal}
+                      className="px-6"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Final Result
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

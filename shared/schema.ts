@@ -81,7 +81,9 @@ export const users = pgTable("users", {
   plan: varchar("plan", { length: 50 }).default("free"),
   totalQuota: integer("total_quota").default(100),      // Lifetime quota for free tier
   monthlyQuota: integer("monthly_quota"),               // Monthly quota for paid plans (null for free)
-  quotaUsed: integer("quota_used").default(0),
+  quotaUsed: integer("quota_used").default(0),          // Combined total (studio + widget)
+  studioQuotaUsed: integer("studio_quota_used").default(0),   // Studio-only generations
+  widgetQuotaUsed: integer("widget_quota_used").default(0),   // Widget-only generations
   quotaResetAt: timestamp("quota_reset_at"),
 
   // Webhook settings
@@ -134,6 +136,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   totalQuota: true,
   monthlyQuota: true,
   quotaUsed: true,
+  studioQuotaUsed: true,
+  widgetQuotaUsed: true,
   quotaResetAt: true,
   webhookUrl: true,
   webhookSecret: true,

@@ -13,10 +13,10 @@ interface UnifiedDashboardLayoutProps {
 }
 
 const navItems = [
-  { id: 'try-on', href: '/dashboard', icon: Sparkles, label: 'Try-On Studio' },
-  { id: 'integration', href: '/dashboard/integration', icon: Code, label: 'Integration' },
-  { id: 'analytics', href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
-  { id: 'settings', href: '/dashboard/settings', icon: Settings, label: 'Settings' },
+  { id: 'try-on', href: '/dashboard', icon: Sparkles, label: 'Mirror.me Studio', hasGradient: true },
+  { id: 'integration', href: '/dashboard/integration', icon: Code, label: 'Integration', hasGradient: false },
+  { id: 'analytics', href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics', hasGradient: false },
+  { id: 'settings', href: '/dashboard/settings', icon: Settings, label: 'Settings', hasGradient: false },
 ];
 
 export default function UnifiedDashboardLayout({ children, title, activeTab }: UnifiedDashboardLayoutProps) {
@@ -115,14 +115,23 @@ export default function UnifiedDashboardLayout({ children, title, activeTab }: U
                     }}
                     className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                       isActive
-                        ? 'bg-primary text-black shadow-[0_0_20px_rgba(255,215,0,0.3)]'
+                        ? item.hasGradient
+                          ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'
+                          : 'bg-primary text-black shadow-[0_0_20px_rgba(255,215,0,0.3)]'
                         : isDarkMode
                           ? 'text-white/70 hover:text-white hover:bg-white/10'
                           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
-                    {item.label}
+                    {item.hasGradient && !isActive ? (
+                      <>
+                        <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent font-semibold">Mirror.me</span>
+                        <span> Studio</span>
+                      </>
+                    ) : (
+                      item.label
+                    )}
                   </a>
                 );
               })}
@@ -213,14 +222,23 @@ export default function UnifiedDashboardLayout({ children, title, activeTab }: U
                     }}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
                       isActive
-                        ? 'bg-primary text-black'
+                        ? item.hasGradient
+                          ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white'
+                          : 'bg-primary text-black'
                         : isDarkMode
                           ? 'text-white/70 hover:text-white hover:bg-white/10'
                           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
-                    {item.label}
+                    {item.hasGradient && !isActive ? (
+                      <>
+                        <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent font-semibold">Mirror.me</span>
+                        <span> Studio</span>
+                      </>
+                    ) : (
+                      item.label
+                    )}
                   </a>
                 );
               })}

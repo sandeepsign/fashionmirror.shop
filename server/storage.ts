@@ -36,6 +36,8 @@ export interface IStorage {
   updateUserVerificationToken(id: string, hashedToken: string, expiresAt: Date): Promise<User>;
   updateUserApiKeys(id: string, liveKey: string, testKey: string): Promise<User | undefined>;
   incrementUserQuota(id: string): Promise<void>;
+  incrementStudioQuota(id: string): Promise<void>;
+  incrementWidgetQuota(id: string): Promise<void>;
   resetUserQuota(id: string, resetAt: Date): Promise<void>;
 
   // Try-on result methods
@@ -177,11 +179,14 @@ export class MemStorage implements IStorage {
       // API keys and quota fields
       liveKey: generateApiKey("mk_live_"),
       testKey: generateApiKey("mk_test_"),
+      apiKeys: [],
       allowedDomains: [],
       plan: "free",
       totalQuota: 100,
       monthlyQuota: null,
       quotaUsed: 0,
+      studioQuotaUsed: 0,
+      widgetQuotaUsed: 0,
       quotaResetAt: null,
       webhookUrl: null,
       webhookSecret: generateWebhookSecret(),
@@ -228,11 +233,14 @@ export class MemStorage implements IStorage {
       // API keys - generate if not provided
       liveKey: insertUser.liveKey || generateApiKey("mk_live_"),
       testKey: insertUser.testKey || generateApiKey("mk_test_"),
+      apiKeys: insertUser.apiKeys || [],
       allowedDomains: insertUser.allowedDomains || [],
       plan: insertUser.plan || "free",
       totalQuota: insertUser.totalQuota ?? 100,
       monthlyQuota: insertUser.monthlyQuota ?? null,
       quotaUsed: insertUser.quotaUsed ?? 0,
+      studioQuotaUsed: insertUser.studioQuotaUsed ?? 0,
+      widgetQuotaUsed: insertUser.widgetQuotaUsed ?? 0,
       quotaResetAt: insertUser.quotaResetAt ?? null,
       webhookUrl: insertUser.webhookUrl ?? null,
       webhookSecret: insertUser.webhookSecret || generateWebhookSecret(),
@@ -311,10 +319,32 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async incrementStudioQuota(id: string): Promise<void> {
+    const user = this.users.get(id);
+    if (user) {
+      user.quotaUsed = (user.quotaUsed ?? 0) + 1;
+      user.studioQuotaUsed = (user.studioQuotaUsed ?? 0) + 1;
+      user.updatedAt = new Date();
+      this.users.set(id, user);
+    }
+  }
+
+  async incrementWidgetQuota(id: string): Promise<void> {
+    const user = this.users.get(id);
+    if (user) {
+      user.quotaUsed = (user.quotaUsed ?? 0) + 1;
+      user.widgetQuotaUsed = (user.widgetQuotaUsed ?? 0) + 1;
+      user.updatedAt = new Date();
+      this.users.set(id, user);
+    }
+  }
+
   async resetUserQuota(id: string, resetAt: Date): Promise<void> {
     const user = this.users.get(id);
     if (user) {
       user.quotaUsed = 0;
+      user.studioQuotaUsed = 0;
+      user.widgetQuotaUsed = 0;
       user.quotaResetAt = resetAt;
       user.updatedAt = new Date();
       this.users.set(id, user);
@@ -611,9 +641,27 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id));
   }
 
+  async incrementStudioQuota(id: string): Promise<void> {
+    await this.db.update(users)
+      .set({
+        quotaUsed: sql`${users.quotaUsed} + 1`,
+        studioQuotaUsed: sql`COALESCE(${users.studioQuotaUsed}, 0) + 1`
+      })
+      .where(eq(users.id, id));
+  }
+
+  async incrementWidgetQuota(id: string): Promise<void> {
+    await this.db.update(users)
+      .set({
+        quotaUsed: sql`${users.quotaUsed} + 1`,
+        widgetQuotaUsed: sql`COALESCE(${users.widgetQuotaUsed}, 0) + 1`
+      })
+      .where(eq(users.id, id));
+  }
+
   async resetUserQuota(id: string, resetAt: Date): Promise<void> {
     await this.db.update(users)
-      .set({ quotaUsed: 0, quotaResetAt: resetAt })
+      .set({ quotaUsed: 0, studioQuotaUsed: 0, widgetQuotaUsed: 0, quotaResetAt: resetAt })
       .where(eq(users.id, id));
   }
 

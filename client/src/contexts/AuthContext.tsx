@@ -22,6 +22,8 @@ export interface Quota {
   totalQuota: number | null;
   monthlyQuota: number | null;
   quotaUsed: number;
+  studioQuotaUsed: number;
+  widgetQuotaUsed: number;
   quotaResetAt: string | null;
 }
 
