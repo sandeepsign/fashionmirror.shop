@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Camera, Upload, RotateCcw, Download, Share2, ShoppingCart, ArrowLeft, AlertCircle, Loader2, X } from "lucide-react";
+import { Camera, Upload, RotateCcw, Download, Share2, ShoppingCart, ArrowLeft, AlertCircle, Loader2, X, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 
 console.log("[Widget] Module loaded - version 2");
 
@@ -100,6 +100,8 @@ export default function WidgetEmbed() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [creativePrompt, setCreativePrompt] = useState<string>("");
+  const [showCreativeOptions, setShowCreativeOptions] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -242,7 +244,7 @@ export default function WidgetEmbed() {
     postToParent("mirrorme:processingStart");
 
     try {
-      // Create session first
+      // Create session first - include specification and description for AI prompt enhancement
       const sessionResponse = await fetch("/api/widget/session", {
         method: "POST",
         headers: {
@@ -250,7 +252,17 @@ export default function WidgetEmbed() {
           "X-Merchant-Key": session.merchantKey,
         },
         body: JSON.stringify({
-          product: session.product,
+          product: {
+            image: session.product.image,
+            name: session.product.name,
+            id: session.product.id,
+            category: session.product.category,
+            price: session.product.price,
+            currency: session.product.currency,
+            url: session.product.url,
+            specification: session.product.specification,  // e.g., "Slim Fit, Choker Style, 100% Cotton"
+            description: session.product.description,      // Long-form product description
+          },
           user: {
             id: session.userId,
             image: userPhoto.startsWith("http") ? userPhoto : undefined,
@@ -278,6 +290,11 @@ export default function WidgetEmbed() {
       // Submit try-on request
       const formData = new FormData();
       formData.append("sessionId", sessionData.session.id);
+
+      // Include user's creative prompt if provided (e.g., "evening party setting with elegant makeup")
+      if (creativePrompt.trim()) {
+        formData.append("creativePrompt", creativePrompt.trim());
+      }
 
       if (userPhotoFile) {
         formData.append("photo", userPhotoFile);
@@ -387,6 +404,8 @@ export default function WidgetEmbed() {
     setResult(null);
     setError(null);
     setProgress(0);
+    setCreativePrompt("");
+    setShowCreativeOptions(false);
     setStep("photo");
   };
 
@@ -479,6 +498,35 @@ export default function WidgetEmbed() {
               <img src={session?.product.image} alt={session?.product.name || "Product"} />
               <span className="label">{session?.product.name || "Product"}</span>
             </div>
+          </div>
+
+          {/* Creative Options - Collapsible */}
+          <div className="creative-options">
+            <button
+              onClick={() => setShowCreativeOptions(!showCreativeOptions)}
+              className="creative-toggle"
+              type="button"
+            >
+              <Sparkles size={16} />
+              <span>Add creative styling</span>
+              {showCreativeOptions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            {showCreativeOptions && (
+              <div className="creative-input-wrapper">
+                <textarea
+                  value={creativePrompt}
+                  onChange={(e) => setCreativePrompt(e.target.value)}
+                  placeholder="Describe the setting or style you'd like...&#10;e.g., 'Evening party with elegant makeup' or 'Outdoor track field, athletic pose'"
+                  className="creative-input"
+                  rows={3}
+                  maxLength={500}
+                />
+                <span className="creative-hint">
+                  Optional: Your styling preferences take priority
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="preview-actions">
@@ -820,6 +868,85 @@ const embedStyles = `
   .preview-actions {
     display: flex;
     gap: 12px;
+  }
+
+  /* Creative Options */
+  .creative-options {
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .creative-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .creative-toggle:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 5%, transparent);
+  }
+
+  .creative-toggle svg:first-child {
+    color: var(--primary);
+  }
+
+  .creative-input-wrapper {
+    margin-top: 12px;
+    animation: slideDown 0.2s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .creative-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    resize: none;
+    transition: border-color 0.2s;
+  }
+
+  .creative-input:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  .creative-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+
+  .creative-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
   }
 
   /* Processing Step */

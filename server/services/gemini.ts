@@ -73,15 +73,53 @@ Generate clear, specific progressive instruction for this single item:`;
 }
 
 // Function to generate context-aware instructions for fashion items using OpenAI
-async function generateItemInstructions(fashionItemsBase64: string[]): Promise<string> {
+// Now accepts optional product metadata to enhance instructions with styling details
+async function generateItemInstructions(
+  fashionItemsBase64: string[],
+  productMetadata?: ProductMetadata
+): Promise<string> {
   try {
-    const instructionPrompt = `Analyze the fashion items in the provided images and generate specific, precise instructions for applying them to a model while preserving existing clothing.
+    // Build product context from metadata if available
+    let productContext = "";
+    if (productMetadata) {
+      const contextParts: string[] = [];
 
+      if (productMetadata.name) {
+        contextParts.push(`Product Name: ${productMetadata.name}`);
+      }
+      if (productMetadata.category) {
+        contextParts.push(`Category: ${productMetadata.category}`);
+      }
+      if (productMetadata.specification) {
+        contextParts.push(`Specifications: ${productMetadata.specification}`);
+      }
+      if (productMetadata.description) {
+        contextParts.push(`Description: ${productMetadata.description}`);
+      }
+
+      if (contextParts.length > 0) {
+        productContext = `
+IMPORTANT PRODUCT INFORMATION (Use this to enhance accuracy):
+${contextParts.join("\n")}
+
+Pay special attention to:
+- Fit style mentioned (e.g., "slim fit", "relaxed fit", "oversized") - ensure the garment fits accordingly
+- Necklace/jewelry style (e.g., "choker", "pendant", "chain") - position correctly on the model
+- Material properties (e.g., "silk", "denim", "leather") - render appropriate texture and draping
+- Design details (e.g., "brass buttons", "embroidered", "distressed") - preserve these features
+- Any specific styling cues from the description
+
+`;
+      }
+    }
+
+    const instructionPrompt = `Analyze the fashion items in the provided images and generate specific, precise instructions for applying them to a model while preserving existing clothing.
+${productContext}
 For each item, determine its category and provide specific preservation instructions:
 
 ITEM CATEGORIES:
 - Accessories (hats, caps, jewelry, bags, belts, scarves): Should be ADDED without changing any existing clothing
-- Footwear (shoes, boots, sandals, sneakers): Should replace only footwear, keep all clothing intact  
+- Footwear (shoes, boots, sandals, sneakers): Should replace only footwear, keep all clothing intact
 - Tops (shirts, blouses, jackets, blazers, sweaters): Should replace only tops, keep bottoms and accessories
 - Bottoms (pants, skirts, shorts): Should replace only bottoms, keep tops and accessories
 - Dresses/Jumpsuits: Should replace entire outfit except accessories and footwear
@@ -96,6 +134,8 @@ Be very specific about what to preserve. For example:
 - If it's a hat: "Add this hat/cap while keeping the existing dress/outfit exactly as it is"
 - If it's a handbag: "Add this handbag while keeping all existing clothing (dress, shoes, jewelry) unchanged"
 - If it's a dress: "Replace the existing outfit with this dress while keeping any accessories and footwear intact"
+- If it's a choker necklace: "Add this choker necklace positioned close to the neck, not hanging low like a pendant"
+- If it's a slim fit shirt: "Replace the top with this slim fit shirt that should hug the body contours"
 
 Generate clear, specific instructions for the items provided.`;
 
@@ -134,12 +174,21 @@ Generate clear, specific instructions for the items provided.`;
   }
 }
 
+// Product metadata for enhanced AI generation
+export interface ProductMetadata {
+  name?: string;           // Product name (e.g., "Classic Denim Jacket")
+  category?: string;       // Category (e.g., "jacket", "top", "accessory")
+  specification?: string;  // Specs (e.g., "Slim Fit, Choker Style, 100% Cotton")
+  description?: string;    // Long-form description with styling details
+}
+
 export interface VirtualTryOnRequest {
   modelImageBase64: string;
   fashionImageBase64: string;
   fashionItemName: string;
   fashionCategory: string;
   textPrompt?: string;
+  productMetadata?: ProductMetadata;  // Enhanced product info for better generation
 }
 
 export interface VirtualTryOnResponse {
@@ -179,6 +228,7 @@ export async function generateVirtualTryOn({
   fashionItemName,
   fashionCategory,
   textPrompt,
+  productMetadata,
   userId
 }: VirtualTryOnRequest & { userId: string }): Promise<VirtualTryOnResponse> {
   try {
@@ -199,11 +249,56 @@ export async function generateVirtualTryOn({
     }
 
     // Generate intelligent instructions for the specific fashion item
-    const itemInstructions = await generateItemInstructions([fashionImageBase64]);
+    // Pass product metadata to enhance instructions with styling details (e.g., "slim fit", "choker style")
+    const itemInstructions = await generateItemInstructions([fashionImageBase64], productMetadata);
     console.log("Generated item-specific instructions:", itemInstructions);
+    if (productMetadata) {
+      console.log("Product metadata used:", JSON.stringify(productMetadata));
+    }
 
     console.log(`Generating with textPrompt: ${textPrompt ? `"${textPrompt}"` : 'undefined/empty'}`);
-    
+
+    // Build product details section for the prompt if metadata is available
+    let productDetailsSection = "";
+    if (productMetadata) {
+      const details: string[] = [];
+      if (productMetadata.name) details.push(`Name: ${productMetadata.name}`);
+      if (productMetadata.specification) details.push(`Specifications: ${productMetadata.specification}`);
+      if (productMetadata.description) details.push(`Description: ${productMetadata.description}`);
+
+      if (details.length > 0) {
+        productDetailsSection = `
+PRODUCT DETAILS (Use unless user instructions override):
+${details.join("\n")}
+
+STYLING GUIDELINES FROM PRODUCT INFO:
+- If "slim fit" or "fitted" is mentioned: The garment should hug the body contours, not appear loose
+- If "relaxed" or "oversized" is mentioned: The garment should have a looser, more casual drape
+- If "choker" is mentioned for jewelry: Position the necklace close to the neck, not hanging low
+- If "pendant" or "chain" is mentioned: Allow the necklace to hang naturally
+- If material is specified (silk, denim, leather, etc.): Render appropriate texture, sheen, and draping behavior
+- If specific features are mentioned (buttons, embroidery, distressing): Ensure these are visible and accurate
+
+`;
+      }
+    }
+
+    // Build user creative instructions section - HIGHEST PRIORITY
+    let userCreativeSection = "";
+    if (textPrompt) {
+      userCreativeSection = `
+USER CREATIVE INSTRUCTIONS (HIGHEST PRIORITY - These take precedence over all other styling):
+"${textPrompt}"
+
+IMPORTANT: The user's creative vision should be honored. If the user requests:
+- A specific setting (e.g., "evening party", "beach", "office") - create that environment
+- Specific styling (e.g., "elegant makeup", "athletic pose") - incorporate these elements
+- A mood or atmosphere - reflect this in the overall image
+- Any styling that conflicts with product details - USER INSTRUCTIONS WIN
+
+`;
+    }
+
     const prompt = `CRITICAL INSTRUCTION: You must preserve the EXACT SAME PERSON'S FACE from the first image. This is the most important requirement.
 
 FACE PRESERVATION (ABSOLUTELY MANDATORY):
@@ -216,17 +311,14 @@ FACE PRESERVATION (ABSOLUTELY MANDATORY):
 - This is a clothing application only - not a person replacement
 
 TASK: Take the clothing item from the second image and place it on the SAME PERSON from the first image.
-
+${userCreativeSection}${productDetailsSection}
 SPECIFIC APPLICATION INSTRUCTIONS:
 ${itemInstructions}
 
-${textPrompt ? `USER CREATIVE INSTRUCTIONS:
-${textPrompt}
-
-` : ''}PROFESSIONAL REQUIREMENTS:
+PROFESSIONAL REQUIREMENTS:
 - Make the new item fit naturally with proper shadows and lighting
 - Create realistic fabric draping and movement
-- Professional studio lighting and background
+${textPrompt ? '- Honor the user\'s creative vision for setting, styling, and atmosphere' : '- Professional studio lighting and background'}
 
 VERIFICATION CHECK: If the result shows a different person, hair color, or facial features, the task has failed completely.`;
 

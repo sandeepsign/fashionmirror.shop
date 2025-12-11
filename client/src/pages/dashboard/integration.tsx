@@ -845,11 +845,11 @@ widget.open({
                     image="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop"
                     name="Oversized Wool Blazer"
                     price="$189.00"
+                    apiKey={displayKey}
                     originalPrice="$249.00"
                     rating={4.8}
                     reviews={124}
                     isNew
-                    apiKey={displayKey}
                   />
 
                   {/* Product 2 */}
@@ -857,9 +857,9 @@ widget.open({
                     image="https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=500&fit=crop"
                     name="Classic Leather Jacket"
                     price="$325.00"
+                    apiKey={displayKey}
                     rating={4.9}
                     reviews={89}
-                    apiKey={displayKey}
                   />
 
                   {/* Product 3 */}

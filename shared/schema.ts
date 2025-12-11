@@ -20,6 +20,8 @@ export const widgetSessions = pgTable("widget_sessions", {
   productPrice: decimal("product_price", { precision: 10, scale: 2 }),
   productCurrency: varchar("product_currency", { length: 3 }),
   productUrl: varchar("product_url", { length: 1000 }),
+  productSpecification: text("product_specification"),  // Product specs (e.g., "100% Cotton, Slim Fit, Machine Washable")
+  productDescription: text("product_description"),      // Long-form product description with styling details
 
   // User info (from merchant's system)
   externalUserId: varchar("external_user_id", { length: 255 }),
@@ -196,6 +198,8 @@ export const createWidgetSessionSchema = z.object({
     price: z.number().positive().optional(),
     currency: z.string().length(3).optional(),
     url: z.string().url().optional(),
+    specification: z.string().optional(),  // Product specs (e.g., "100% Cotton, Slim Fit, Choker Style")
+    description: z.string().optional(),    // Long-form product description with styling details
   }),
   user: z.object({
     id: z.string().optional(),

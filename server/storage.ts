@@ -484,6 +484,7 @@ export class MemStorage implements IStorage {
     const newSession: WidgetSession = {
       id: session.id,
       userId: session.userId ?? null,
+      apiKeyId: session.apiKeyId ?? null,
       productImage: session.productImage,
       productName: session.productName ?? null,
       productId: session.productId ?? null,
@@ -491,6 +492,8 @@ export class MemStorage implements IStorage {
       productPrice: session.productPrice ?? null,
       productCurrency: session.productCurrency ?? null,
       productUrl: session.productUrl ?? null,
+      productSpecification: session.productSpecification ?? null,
+      productDescription: session.productDescription ?? null,
       externalUserId: session.externalUserId ?? null,
       userImage: session.userImage ?? null,
       status: session.status ?? "pending",

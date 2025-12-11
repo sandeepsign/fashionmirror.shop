@@ -11,7 +11,7 @@ import {
   createWidgetSessionSchema,
   trackWidgetEventSchema,
 } from "@shared/schema";
-import { generateVirtualTryOn, imageBufferToBase64 } from "../services/gemini";
+import { generateVirtualTryOn, imageBufferToBase64, ProductMetadata } from "../services/gemini";
 import { mediaStorage } from "../services/mediaStorage";
 import {
   triggerSessionCreated,
@@ -120,6 +120,8 @@ router.post("/session", widgetAuth, async (req: Request, res: Response) => {
       productPrice: product.price?.toString() || null,
       productCurrency: product.currency || null,
       productUrl: product.url || null,
+      productSpecification: product.specification || null,  // Product specs (e.g., "Slim Fit, Choker Style")
+      productDescription: product.description || null,      // Long-form product description
       externalUserId: sessionUser?.id || null,
       userImage: sessionUser?.image || null,
       status: sessionUser?.image && options?.skipPhotoStep ? "pending" : "pending",
@@ -340,7 +342,7 @@ router.post(
 
     try {
       const user = req.widgetUser!;
-      const { sessionId, photoUrl } = req.body;
+      const { sessionId, photoUrl, creativePrompt } = req.body;
       const photoFile = req.file;
 
       // Validate session ID
@@ -569,14 +571,30 @@ router.post(
         });
       }
 
-      // Generate virtual try-on
+      // Generate virtual try-on with product metadata for enhanced AI generation
       try {
+        // Log if user provided creative instructions
+        if (creativePrompt) {
+          console.log(`[Widget] User creative prompt: "${creativePrompt}"`);
+        }
+
         const result = await generateVirtualTryOn({
           modelImageBase64: userPhotoBase64,
           fashionImageBase64: productImageBase64,
           fashionItemName: session.productName || "Fashion Item",
           fashionCategory: session.productCategory || "clothing",
           userId: `widget_${user.id}`,
+          // User's creative prompt takes highest priority (e.g., "evening party setting")
+          textPrompt: creativePrompt || undefined,
+          // Pass product metadata to enhance AI prompt with styling details
+          // e.g., "slim fit", "choker style necklace", "100% silk" - these details
+          // help the AI render the item more accurately than visual analysis alone
+          productMetadata: {
+            name: session.productName || undefined,
+            category: session.productCategory || undefined,
+            specification: session.productSpecification || undefined,
+            description: session.productDescription || undefined,
+          },
         });
 
         if (!result.success) {
