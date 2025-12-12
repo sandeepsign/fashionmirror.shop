@@ -56,13 +56,18 @@ export function registerMediaRoutes(app: Express): void {
       
       const [type, pathUserId] = pathParts;
       const currentUserId = (req as any).user?.id;
-      
+
       if (!currentUserId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
-      
+
       // Verify the user can only access their own files
-      if (pathUserId !== currentUserId) {
+      // Handle both direct userId and widget_userId formats
+      const effectivePathUserId = pathUserId.startsWith('widget_')
+        ? pathUserId.replace('widget_', '')
+        : pathUserId;
+
+      if (effectivePathUserId !== currentUserId) {
         return res.status(403).json({ error: 'Access denied: You can only access your own files' });
       }
 
