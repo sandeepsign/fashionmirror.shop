@@ -273,6 +273,9 @@
           email: data.userEmail,
           name: data.userName,
         },
+        model: {
+          image: data.modelImage,
+        },
         options: {
           skipPhotoStep: data.skipPhotoStep === 'true',
           allowCamera: data.allowCamera !== 'false',
@@ -353,6 +356,10 @@
       const user = options.user || {};
       if (user.image) params.set('userImage', user.image);
       if (user.id) params.set('userId', user.id);
+
+      // Add model params (pre-configured model image URL)
+      const model = options.model || {};
+      if (model.image) params.set('modelImage', model.image);
 
       // Add options
       const opts = options.options || {};
@@ -513,6 +520,7 @@
           merchantKey: attrs.merchantKey,
           product: attrs.product,
           user: attrs.user,
+          model: attrs.model,
           options: attrs.options,
           theme: attrs.theme,
           locale: attrs.locale,

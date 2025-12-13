@@ -21,6 +21,7 @@ interface SessionData {
   product: ProductInfo;
   userImage?: string;
   userId?: string;
+  modelImage?: string;
   theme: "light" | "dark" | "auto";
   locale: string;
   skipPhotoStep: boolean;
@@ -74,6 +75,7 @@ function getSessionFromUrl(): SessionData | null {
     },
     userImage: params.get("userImage") || undefined,
     userId: params.get("userId") || undefined,
+    modelImage: params.get("modelImage") || undefined,
     theme: (params.get("theme") as "light" | "dark" | "auto") || "auto",
     locale: params.get("locale") || "en",
     skipPhotoStep: params.get("skipPhotoStep") === "true",
@@ -99,6 +101,44 @@ function formatPrice(price?: number, currency?: string): string {
   return formatter.format(price);
 }
 
+// Fetch model image from URL and convert to base64
+async function fetchModelImageFromUrl(url: string): Promise<{ dataUrl: string; file: File } | null> {
+  try {
+    // Use proxy endpoint to fetch external images (avoids CORS issues)
+    const response = await fetch(`/api/widget/fetch-image?url=${encodeURIComponent(url)}`);
+    if (!response.ok) {
+      console.error("[Widget] Failed to fetch model image:", response.statusText);
+      return null;
+    }
+
+    const blob = await response.blob();
+
+    // Validate it's an image
+    if (!blob.type.startsWith("image/")) {
+      console.error("[Widget] URL did not return an image:", blob.type);
+      return null;
+    }
+
+    // Convert blob to data URL
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        const file = new File([blob], "model.jpg", { type: blob.type });
+        resolve({ dataUrl, file });
+      };
+      reader.onerror = () => {
+        console.error("[Widget] Failed to read model image blob");
+        resolve(null);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("[Widget] Error fetching model image:", error);
+    return null;
+  }
+}
+
 export default function WidgetEmbed() {
   const [session, setSession] = useState<SessionData | null>(null);
   const [step, setStep] = useState<Step>("photo");
@@ -114,6 +154,8 @@ export default function WidgetEmbed() {
   const [showCreativeOptions, setShowCreativeOptions] = useState(false);
   const [processingMessage, setProcessingMessage] = useState(processingMessages[0]);
   const [isImageLoading, setIsImageLoading] = useState(false);
+  const [modelImageLoading, setModelImageLoading] = useState(false);
+  const [modelImageError, setModelImageError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -143,6 +185,27 @@ export default function WidgetEmbed() {
     if (sessionData.userImage && sessionData.skipPhotoStep) {
       setUserPhoto(sessionData.userImage);
       setStep("preview");
+    }
+
+    // If modelImage URL is provided, try to fetch it automatically
+    if (sessionData.modelImage) {
+      setModelImageLoading(true);
+      setModelImageError(null);
+      fetchModelImageFromUrl(sessionData.modelImage)
+        .then((result) => {
+          if (result) {
+            setUserPhoto(result.dataUrl);
+            setUserPhotoFile(result.file);
+            setStep("preview");
+            postToParent("mirrorme:photoSelected", { source: "modelUrl" });
+          } else {
+            setModelImageError("Failed to load model image from URL");
+            // Fall back to photo selection step
+          }
+        })
+        .finally(() => {
+          setModelImageLoading(false);
+        });
     }
 
     // Notify parent that we're ready
@@ -444,6 +507,17 @@ export default function WidgetEmbed() {
       <div className="widget-embed widget-loading">
         <div className="loading-spinner" />
         <p>Loading...</p>
+        <style>{embedStyles}</style>
+      </div>
+    );
+  }
+
+  // Show loading state while fetching model image from URL
+  if (modelImageLoading) {
+    return (
+      <div className="widget-embed widget-loading">
+        <div className="loading-spinner" />
+        <p>Loading your photo...</p>
         <style>{embedStyles}</style>
       </div>
     );

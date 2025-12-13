@@ -167,6 +167,11 @@ app.use((req, res, next) => {
   }));
   log("Widget static files configured at /widget");
 
+  // Serve widget demo page
+  app.get('/widget-demo.html', (_req, res) => {
+    res.sendFile(path.join(process.cwd(), 'widget-demo.html'));
+  });
+
   // Register media routes for protected content
   try {
     registerMediaRoutes(app);

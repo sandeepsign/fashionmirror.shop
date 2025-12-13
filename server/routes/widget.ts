@@ -1032,6 +1032,110 @@ router.get("/download/:sessionId", async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/widget/fetch-image
+ * Proxy endpoint to fetch external images (avoids CORS issues)
+ * Used for model image URL feature
+ */
+router.get("/fetch-image", async (req: Request, res: Response) => {
+  try {
+    const { url } = req.query;
+
+    if (!url || typeof url !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "MISSING_URL",
+          message: "URL parameter is required",
+        },
+      });
+    }
+
+    // Validate URL format
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_URL",
+          message: "Invalid URL format",
+        },
+      });
+    }
+
+    // Only allow http and https protocols
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_PROTOCOL",
+          message: "Only HTTP and HTTPS URLs are supported",
+        },
+      });
+    }
+
+    // Fetch the image
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "MirrorMe-Widget/1.0",
+        Accept: "image/*",
+      },
+    });
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: {
+          code: "FETCH_FAILED",
+          message: `Failed to fetch image: ${response.statusText}`,
+        },
+      });
+    }
+
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+
+    // Validate it's an image
+    if (!contentType.startsWith("image/")) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "NOT_AN_IMAGE",
+          message: "URL does not return an image",
+        },
+      });
+    }
+
+    const buffer = await response.arrayBuffer();
+
+    // Limit size to 10MB
+    if (buffer.byteLength > 10 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "IMAGE_TOO_LARGE",
+          message: "Image exceeds 10MB limit",
+        },
+      });
+    }
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "public, max-age=300"); // Cache for 5 minutes
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error("Error fetching image:", error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Failed to fetch image",
+      },
+    });
+  }
+});
+
+/**
  * POST /api/widget/analytics
  * Track widget events
  */
