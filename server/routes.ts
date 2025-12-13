@@ -4,6 +4,8 @@ import { getStorage } from "./storage";
 import { insertTryOnResultSchema, registerUserSchema, loginUserSchema } from "@shared/schema";
 import { generateVirtualTryOn, generateSimultaneousTryOn, generateProgressiveTryOn, imageBufferToBase64 } from "./services/gemini";
 import { analyzeImageWithAI } from "./services/imageAnalyzer";
+import { fetchImageFromUrl, bufferToDataUrl, validateImageUrl } from "./services/urlFetcher";
+import { smartExtractProduct, extractFromDirectImageUrl } from "./services/productExtractor";
 import { generateVerificationToken, hashVerificationToken, sendVerificationEmail, sendWelcomeEmail } from "./services/emailVerification";
 import { generateUserApiKeys, generateWebhookSecret } from "./services/merchantService";
 import { requireAuth, optionalAuth } from "./middleware/auth";
@@ -1090,10 +1092,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // URL-BASED IMAGE FETCHING ENDPOINTS
+  // ============================================
+
+  // Fetch model image from URL
+  app.post("/api/model-image/fetch-url", async (req, res) => {
+    try {
+      const { url } = req.body;
+
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: "URL is required" });
+      }
+
+      // Validate URL
+      const validation = validateImageUrl(url);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
+
+      console.log(`[API] Fetching model image from URL: ${url}`);
+
+      // Fetch the image
+      const fetchedImage = await fetchImageFromUrl(url);
+
+      // Convert to base64 data URL
+      const dataUrl = bufferToDataUrl(fetchedImage.buffer, fetchedImage.mimeType);
+
+      res.json({
+        success: true,
+        imageDataUrl: dataUrl,
+        mimeType: fetchedImage.mimeType,
+        size: fetchedImage.size,
+        originalUrl: url
+      });
+    } catch (error) {
+      console.error("Error fetching model image from URL:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to fetch image from URL"
+      });
+    }
+  });
+
+  // Extract fashion product from URL (product page or direct image)
+  app.post("/api/fashion-items/fetch-from-url", async (req, res) => {
+    try {
+      const { url } = req.body;
+
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: "URL is required" });
+      }
+
+      console.log(`[API] Extracting product from URL: ${url}`);
+
+      // Use smart extraction to determine if it's a direct image or product page
+      const result = await smartExtractProduct(url);
+
+      if (!result.success || !result.product) {
+        return res.status(400).json({
+          error: result.error || "Failed to extract product from URL"
+        });
+      }
+
+      const product = result.product;
+
+      // Build response
+      res.json({
+        success: true,
+        product: {
+          name: product.name,
+          category: product.category,
+          description: product.description,
+          specifications: product.specifications,
+          imageDataUrl: `data:${product.imageMimeType};base64,${product.imageBase64}`,
+          sourceUrl: product.sourceUrl,
+          price: product.price
+        }
+      });
+    } catch (error) {
+      console.error("Error extracting product from URL:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to extract product from URL"
+      });
+    }
+  });
+
+  // Simple URL validation endpoint (for frontend pre-validation)
+  app.post("/api/validate-url", (req, res) => {
+    try {
+      const { url } = req.body;
+
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ valid: false, error: "URL is required" });
+      }
+
+      const validation = validateImageUrl(url);
+      res.json(validation);
+    } catch (error) {
+      res.status(400).json({ valid: false, error: "Invalid URL" });
+    }
+  });
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
-    res.json({ 
-      status: "ok", 
+    res.json({
+      status: "ok",
       timestamp: new Date().toISOString(),
       geminiApiKey: !!process.env.GEMINI_API_KEY
     });

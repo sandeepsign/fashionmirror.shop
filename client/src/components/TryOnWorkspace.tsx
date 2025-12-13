@@ -1,12 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient, FashionItemInput } from "@/lib/api";
+import { apiClient, FashionItemInput, ExtractedProductFromUrl } from "@/lib/api";
 import { FashionItem, TryOnResult } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Upload, Image, Sparkles, Download, Plus, Trash2, X, ChevronLeft, ChevronRight, Palette, Check, Clock, Loader2, ClipboardPaste, BookmarkPlus } from "lucide-react";
+import { Upload, Image, Sparkles, Download, Plus, Trash2, X, ChevronLeft, ChevronRight, Palette, Check, Clock, Loader2, ClipboardPaste, BookmarkPlus, Link, Globe, ExternalLink } from "lucide-react";
+
+// Helper function to convert data URL to File
+function dataUrlToFile(dataUrl: string, filename: string): File {
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+}
 
 interface TryOnWorkspaceProps {
   modelImage: File | null;
@@ -67,6 +81,16 @@ export default function TryOnWorkspace({
   const [activeCategory, setActiveCategory] = useState("all");
   const [modelDragActive, setModelDragActive] = useState(false);
   const [fashionDragActive, setFashionDragActive] = useState(false);
+
+  // URL input states
+  const [showModelUrlInput, setShowModelUrlInput] = useState(false);
+  const [modelUrlValue, setModelUrlValue] = useState('');
+  const [isLoadingModelUrl, setIsLoadingModelUrl] = useState(false);
+
+  const [showProductUrlModal, setShowProductUrlModal] = useState(false);
+  const [productUrlValue, setProductUrlValue] = useState('');
+  const [isLoadingProductUrl, setIsLoadingProductUrl] = useState(false);
+  const [extractedProduct, setExtractedProduct] = useState<ExtractedProductFromUrl | null>(null);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -138,10 +162,65 @@ export default function TryOnWorkspace({
 
   const handleChangeModel = () => {
     onModelImageSelect(null);
+    setShowModelUrlInput(false);
+    setModelUrlValue('');
     if (modelInputRef.current) {
       modelInputRef.current.value = '';
     }
   };
+
+  // Model URL fetch handler - uses direct fetch to avoid module caching issues
+  const handleFetchModelFromUrl = useCallback(async () => {
+    if (!modelUrlValue.trim()) {
+      toast({
+        title: "URL required",
+        description: "Please enter an image URL",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoadingModelUrl(true);
+    try {
+      // Direct fetch call to avoid Vite module caching issues
+      const response = await fetch('/api/model-image/fetch-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: modelUrlValue.trim() }),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch image from URL');
+      }
+
+      if (result.success && result.imageDataUrl) {
+        // Convert data URL to File object using local helper function
+        const file = dataUrlToFile(result.imageDataUrl, `model-from-url-${Date.now()}.jpg`);
+        onModelImageSelect(file);
+        setShowModelUrlInput(false);
+        setModelUrlValue('');
+
+        toast({
+          title: "Image loaded!",
+          description: "Model photo fetched from URL successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch model image:', error);
+      toast({
+        title: "Failed to fetch image",
+        description: error instanceof Error ? error.message : "Could not fetch image from URL",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingModelUrl(false);
+    }
+  }, [modelUrlValue, onModelImageSelect, toast]);
 
   // Fashion upload handlers
   const handleFashionDrag = (e: React.DragEvent) => {
@@ -273,6 +352,82 @@ export default function TryOnWorkspace({
       }
     }
   }, [onFashionImagesSelect, toast]);
+
+  // Product URL extraction handlers
+  const handleExtractProductFromUrl = useCallback(async () => {
+    if (!productUrlValue.trim()) {
+      toast({
+        title: "URL required",
+        description: "Please enter a product page URL or direct image URL",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoadingProductUrl(true);
+    setExtractedProduct(null);
+
+    try {
+      // Direct fetch call instead of apiClient method to work around module caching issue
+      const response = await fetch('/api/fashion-items/fetch-from-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: productUrlValue.trim() }),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to extract product from URL');
+      }
+
+      if (result.success && result.product) {
+        setExtractedProduct(result.product);
+        toast({
+          title: "Product extracted!",
+          description: `Found: ${result.product.name}`,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to extract product:', error);
+      toast({
+        title: "Extraction failed",
+        description: error instanceof Error ? error.message : "Could not extract product from URL",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingProductUrl(false);
+    }
+  }, [productUrlValue, toast]);
+
+  const handleAddExtractedProduct = useCallback(() => {
+    if (!extractedProduct) return;
+
+    // Convert the extracted product image to a File and add to fashion items
+    const file = dataUrlToFile(extractedProduct.imageDataUrl, `${extractedProduct.name.replace(/\s+/g, '-')}-${Date.now()}.jpg`);
+
+    onFashionImagesSelect([file]);
+
+    toast({
+      title: "Product added!",
+      description: `${extractedProduct.name} added to try-on items`,
+    });
+
+    // Reset modal state
+    setShowProductUrlModal(false);
+    setProductUrlValue('');
+    setExtractedProduct(null);
+  }, [extractedProduct, onFashionImagesSelect, toast]);
+
+  const handleCloseProductModal = useCallback(() => {
+    setShowProductUrlModal(false);
+    setProductUrlValue('');
+    setExtractedProduct(null);
+    setIsLoadingProductUrl(false);
+  }, []);
 
   // Save to collection handler
   const handleSaveToCollection = useCallback(async (index: number) => {
@@ -532,6 +687,132 @@ export default function TryOnWorkspace({
         </DialogContent>
       </Dialog>
 
+      {/* Product URL Extraction Modal */}
+      <Dialog open={showProductUrlModal} onOpenChange={handleCloseProductModal}>
+        <DialogContent className="max-w-md sm:max-w-lg overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              Add Fashion Item from URL
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Paste a product page URL (Amazon, Zara, etc.) or a direct image link. AI will extract the product details.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* URL Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Product or Image URL</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://amazon.com/product/... or https://example.com/image.jpg"
+                  value={productUrlValue}
+                  onChange={(e) => setProductUrlValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !isLoadingProductUrl && handleExtractProductFromUrl()}
+                  disabled={isLoadingProductUrl}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleExtractProductFromUrl}
+                  disabled={isLoadingProductUrl || !productUrlValue.trim()}
+                >
+                  {isLoadingProductUrl ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Extract'
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Loading State */}
+            {isLoadingProductUrl && (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                <p className="text-sm text-muted-foreground">Analyzing webpage...</p>
+                <p className="text-xs text-muted-foreground mt-1">This may take a few seconds</p>
+              </div>
+            )}
+
+            {/* Extracted Product Preview */}
+            {extractedProduct && !isLoadingProductUrl && (
+              <div className="border border-border rounded-lg p-4 space-y-3 bg-muted/30">
+                {/* Product Header with Image */}
+                <div className="flex gap-4">
+                  <img
+                    src={extractedProduct.imageDataUrl}
+                    alt={extractedProduct.name}
+                    className="w-20 h-20 object-cover rounded-lg border border-border flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <h4 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">{extractedProduct.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">{extractedProduct.category}</p>
+                    {extractedProduct.price && (
+                      <p className="text-sm font-semibold text-green-600 dark:text-green-400 mt-1">
+                        {extractedProduct.price.currency} {extractedProduct.price.amount.toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description - truncated */}
+                {extractedProduct.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                    {extractedProduct.description}
+                  </p>
+                )}
+
+                {/* Specifications */}
+                {Object.keys(extractedProduct.specifications || {}).length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Specifications</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(extractedProduct.specifications)
+                        .filter(([_, value]) => value)
+                        .slice(0, 4)
+                        .map(([key, value]) => (
+                          <span
+                            key={key}
+                            className="text-xs px-2 py-0.5 bg-muted rounded-md border border-border"
+                          >
+                            {key}: {value}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Source URL - properly truncated */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border">
+                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                  <a
+                    href={extractedProduct.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate hover:text-primary hover:underline max-w-full"
+                  >
+                    {new URL(extractedProduct.sourceUrl).hostname + new URL(extractedProduct.sourceUrl).pathname.slice(0, 40) + '...'}
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={handleCloseProductModal}>
+              Cancel
+            </Button>
+            {extractedProduct && (
+              <Button onClick={handleAddExtractedProduct}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add to Try-On
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="bg-gray-900 [.dashboard-light_&]:bg-gray-100 rounded-2xl p-6 border border-white/10 [.dashboard-light_&]:border-gray-300">
         {/* Main workspace layout */}
         <div className="grid lg:grid-cols-2 gap-6 mb-6">
@@ -562,7 +843,7 @@ export default function TryOnWorkspace({
               onDragLeave={handleModelDrag}
               onDragOver={handleModelDrag}
               onDrop={handleModelDrop}
-              onClick={!modelImageUrl ? handleModelClick : undefined}
+              onClick={!modelImageUrl && !showModelUrlInput ? handleModelClick : undefined}
             >
               {modelImageUrl ? (
                 <>
@@ -591,6 +872,56 @@ export default function TryOnWorkspace({
                     </div>
                   </div>
                 </>
+              ) : showModelUrlInput ? (
+                <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                    <Link className="h-8 w-8 text-white/70 [.dashboard-light_&]:text-gray-600" />
+                  </div>
+                  <h4 className="font-medium text-white [.dashboard-light_&]:text-gray-900 mb-4">Enter Image URL</h4>
+                  <div className="w-full max-w-sm space-y-3">
+                    <Input
+                      placeholder="https://example.com/photo.jpg"
+                      value={modelUrlValue}
+                      onChange={(e) => setModelUrlValue(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleFetchModelFromUrl()}
+                      className="bg-white/10 [.dashboard-light_&]:bg-white border-white/20 [.dashboard-light_&]:border-gray-300 text-white [.dashboard-light_&]:text-gray-900 placeholder:text-white/40 [.dashboard-light_&]:placeholder:text-gray-400"
+                      disabled={isLoadingModelUrl}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setShowModelUrlInput(false);
+                          setModelUrlValue('');
+                        }}
+                        className="flex-1 border-white/20 [.dashboard-light_&]:border-gray-300 text-white [.dashboard-light_&]:text-gray-700"
+                        disabled={isLoadingModelUrl}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleFetchModelFromUrl}
+                        className="flex-1 bg-primary text-primary-foreground"
+                        disabled={isLoadingModelUrl || !modelUrlValue.trim()}
+                      >
+                        {isLoadingModelUrl ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4 mr-2" />
+                            Fetch Image
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/40 [.dashboard-light_&]:text-gray-400 mt-4">Paste a direct link to any image</p>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full p-6 text-center">
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -598,9 +929,24 @@ export default function TryOnWorkspace({
                   </div>
                   <h4 className="font-medium text-white [.dashboard-light_&]:text-gray-900 mb-2">Drop your photo here</h4>
                   <p className="text-sm text-white/60 [.dashboard-light_&]:text-gray-500 mb-4">or click to browse</p>
-                  <Button size="sm" className="bg-white [.dashboard-light_&]:bg-gray-900 text-gray-900 [.dashboard-light_&]:text-white hover:bg-white/90 [.dashboard-light_&]:hover:bg-gray-800">
-                    Choose Photo
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="bg-white [.dashboard-light_&]:bg-gray-900 text-gray-900 [.dashboard-light_&]:text-white hover:bg-white/90 [.dashboard-light_&]:hover:bg-gray-800">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Choose Photo
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowModelUrlInput(true);
+                      }}
+                      className="border-white/20 [.dashboard-light_&]:border-gray-300 text-white [.dashboard-light_&]:text-gray-700 hover:bg-white/10 [.dashboard-light_&]:hover:bg-gray-100"
+                    >
+                      <Link className="h-4 w-4 mr-2" />
+                      Use URL
+                    </Button>
+                  </div>
                   <p className="text-xs text-white/40 [.dashboard-light_&]:text-gray-400 mt-3">JPG, PNG up to 10MB</p>
                 </div>
               )}
@@ -632,32 +978,41 @@ export default function TryOnWorkspace({
               fashionDragActive ? 'border-accent bg-accent/5' : 'border-white/20 [.dashboard-light_&]:border-gray-300 bg-white/5 [.dashboard-light_&]:bg-gray-200/50'
             }`}>
               {/* Add buttons bar */}
-              <div className="flex items-center gap-2 p-3 border-b border-white/10 [.dashboard-light_&]:border-gray-300 bg-white/5 [.dashboard-light_&]:bg-gray-100">
+              <div className="flex flex-wrap items-center gap-2 p-3 border-b border-white/10 [.dashboard-light_&]:border-gray-300 bg-white/5 [.dashboard-light_&]:bg-gray-100">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleFashionClick}
-                  className="flex-1 border-white/20 [.dashboard-light_&]:border-gray-300 [.dashboard-light_&]:bg-white text-white [.dashboard-light_&]:text-gray-700 hover:bg-white/10 [.dashboard-light_&]:hover:bg-gray-100"
+                  className="border-white/20 [.dashboard-light_&]:border-gray-300 [.dashboard-light_&]:bg-white text-white [.dashboard-light_&]:text-gray-700 hover:bg-white/10 [.dashboard-light_&]:hover:bg-gray-100"
                 >
-                  <Upload className="h-4 w-4 mr-2" />
+                  <Upload className="h-4 w-4 mr-1" />
                   Upload
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handlePasteFromClipboard}
-                  className="flex-1 border-white/20 [.dashboard-light_&]:border-gray-300 [.dashboard-light_&]:bg-white text-white [.dashboard-light_&]:text-gray-700 hover:bg-white/10 [.dashboard-light_&]:hover:bg-gray-100"
+                  className="border-white/20 [.dashboard-light_&]:border-gray-300 [.dashboard-light_&]:bg-white text-white [.dashboard-light_&]:text-gray-700 hover:bg-white/10 [.dashboard-light_&]:hover:bg-gray-100"
                 >
-                  <ClipboardPaste className="h-4 w-4 mr-2" />
+                  <ClipboardPaste className="h-4 w-4 mr-1" />
                   Paste Image
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowProductUrlModal(true)}
+                  className="border-white/20 [.dashboard-light_&]:border-gray-300 [.dashboard-light_&]:bg-white text-white [.dashboard-light_&]:text-gray-700 hover:bg-white/10 [.dashboard-light_&]:hover:bg-gray-100"
+                >
+                  <Globe className="h-4 w-4 mr-1" />
+                  From URL
                 </Button>
                 <Button
                   size="sm"
                   variant="default"
                   onClick={() => setShowCollectionBrowser(true)}
-                  className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                  className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
-                  <Sparkles className="h-4 w-4 mr-2" />
+                  <Sparkles className="h-4 w-4 mr-1" />
                   Collection
                 </Button>
               </div>

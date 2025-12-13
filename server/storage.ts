@@ -147,6 +147,8 @@ export class MemStorage implements IStorage {
         ...item,
         id,
         description: item.description || null,
+        specifications: {},
+        sourceUrl: null,
         userId: null, // Default items are shared
         isShared: "true", // Default items are available to all users
         createdAt: new Date()
@@ -426,6 +428,8 @@ export class MemStorage implements IStorage {
       ...insertItem,
       id,
       description: insertItem.description || null,
+      specifications: insertItem.specifications ?? {},
+      sourceUrl: insertItem.sourceUrl ?? null,
       userId: insertItem.userId ?? null,
       isShared: insertItem.isShared ?? "false",
       createdAt: new Date()

@@ -1,5 +1,7 @@
 import { TryOnResult, FashionItem } from "@shared/schema";
 
+console.log('[API] api.ts module loading - VERSION 3 - with fetchModelImageFromUrl and fetchProductFromUrl');
+
 export interface FashionItemInput {
   image: File;
   name: string;
@@ -52,6 +54,47 @@ export interface SimultaneousTryOnResult {
 
 export interface ResendVerificationResponse {
   message: string;
+  error?: string;
+}
+
+// URL-based image fetching interfaces
+export interface FetchModelImageFromUrlResponse {
+  success: boolean;
+  imageDataUrl: string;
+  mimeType: string;
+  size: number;
+  originalUrl: string;
+  error?: string;
+}
+
+export interface ExtractedProductFromUrl {
+  name: string;
+  category: string;
+  description: string;
+  specifications: {
+    material?: string;
+    fit?: string;
+    care?: string;
+    color?: string;
+    style?: string;
+    [key: string]: string | undefined;
+  };
+  imageDataUrl: string;
+  sourceUrl: string;
+  price?: {
+    amount: number;
+    currency: string;
+  };
+}
+
+export interface FetchProductFromUrlResponse {
+  success: boolean;
+  product?: ExtractedProductFromUrl;
+  error?: string;
+}
+
+export interface ValidateUrlResponse {
+  valid: boolean;
   error?: string;
 }
 
@@ -377,6 +420,90 @@ export class APIClient {
 
     return data;
   }
+
+  // ============================================
+  // URL-BASED IMAGE FETCHING METHODS
+  // ============================================
+
+  /**
+   * Fetch a model image from a URL
+   * Returns base64 data URL that can be used directly
+   */
+  async fetchModelImageFromUrl(url: string): Promise<FetchModelImageFromUrlResponse> {
+    const response = await fetch(`${this.baseUrl}/api/model-image/fetch-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+      credentials: 'include'
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch image from URL');
+    }
+
+    return data;
+  }
+
+  /**
+   * Extract a fashion product from a URL (product page or direct image)
+   * Uses AI to intelligently extract product info from e-commerce pages
+   */
+  async fetchProductFromUrl(url: string): Promise<FetchProductFromUrlResponse> {
+    const response = await fetch(`${this.baseUrl}/api/fashion-items/fetch-from-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+      credentials: 'include'
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to extract product from URL');
+    }
+
+    return data;
+  }
+
+  /**
+   * Validate a URL before fetching
+   */
+  async validateUrl(url: string): Promise<ValidateUrlResponse> {
+    const response = await fetch(`${this.baseUrl}/api/validate-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+      credentials: 'include'
+    });
+
+    return response.json();
+  }
+
+  /**
+   * Helper to convert a data URL to a File object
+   */
+  dataUrlToFile(dataUrl: string, filename: string): File {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  }
 }
 
 export const apiClient = new APIClient();
+
+// Debug: log available methods on apiClient
+console.log('[API Client] Methods available:', Object.getOwnPropertyNames(Object.getPrototypeOf(apiClient)).filter(m => m !== 'constructor'));
