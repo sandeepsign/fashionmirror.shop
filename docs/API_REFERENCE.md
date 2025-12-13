@@ -73,6 +73,9 @@ POST /api/widget/session
   },
   "user": {
     "id": "user_456"
+  },
+  "model": {
+    "image": "https://example.com/model.jpg"
   }
 }
 ```
@@ -86,6 +89,7 @@ POST /api/widget/session
 | product.price | number | No | Product price |
 | product.currency | string | No | Currency code (USD, EUR, etc.) |
 | user.id | string | No | Your user identifier for analytics |
+| model.image | string | No | Pre-loaded model image URL. If provided, widget will fetch and use this image automatically, skipping the photo upload step. Falls back to upload if fetch fails. |
 
 #### Response
 
@@ -226,6 +230,37 @@ GET /api/widget/session/:sessionId/result
   }
 }
 ```
+
+---
+
+### Fetch External Image (Proxy)
+
+Proxy endpoint to fetch external images, avoiding CORS issues. Used internally by the widget for model image URL feature.
+
+```http
+GET /api/widget/fetch-image?url=<encoded_url>
+```
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| url | string | Yes | URL-encoded image URL to fetch |
+
+#### Response
+
+Returns the raw image binary with appropriate `Content-Type` header.
+
+#### Error Responses
+
+| Code | HTTP | Description |
+|------|------|-------------|
+| `MISSING_URL` | 400 | URL parameter is required |
+| `INVALID_URL` | 400 | Invalid URL format |
+| `INVALID_PROTOCOL` | 400 | Only HTTP/HTTPS URLs supported |
+| `NOT_AN_IMAGE` | 400 | URL does not return an image |
+| `IMAGE_TOO_LARGE` | 400 | Image exceeds 10MB limit |
+| `FETCH_FAILED` | 4xx/5xx | Failed to fetch image from URL |
 
 ---
 

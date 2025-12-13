@@ -29,21 +29,42 @@ Before going live, add your website domain to the whitelist:
 Add this script to your product pages:
 
 ```html
-<script src="https://cdn.fashionmirror.shop/widget.js"></script>
-<script>
-  MirrorMe.init({
-    merchantKey: 'mk_test_your_key_here',
-    productId: 'your-product-id',
-    productName: 'Summer Floral Dress',
-    productImage: 'https://yoursite.com/product.jpg',
-    container: '#try-on-button', // Optional: custom mount point
-    theme: 'light', // 'light' or 'dark'
-  });
-</script>
+<script src="https://fashionmirror.shop/widget/mirror.js"></script>
 
-<!-- Add a try-on button anywhere -->
-<button id="try-on-button">Try It On</button>
+<!-- Basic usage -->
+<button
+  class="mirror-me-button"
+  data-merchant-key="mk_test_your_key_here"
+  data-product-image="https://yoursite.com/product.jpg"
+  data-product-name="Summer Floral Dress"
+>
+  Try It On
+</button>
 ```
+
+#### Option A2: With Pre-loaded Model Image (Skip Photo Upload)
+
+If you have a model image URL, the widget will automatically load it and skip the photo upload step:
+
+```html
+<script src="https://fashionmirror.shop/widget/mirror.js"></script>
+
+<button
+  class="mirror-me-button"
+  data-merchant-key="mk_test_your_key_here"
+  data-product-image="https://yoursite.com/product.jpg"
+  data-product-name="Summer Floral Dress"
+  data-model-image="https://yoursite.com/model.jpg"
+>
+  Try It On
+</button>
+```
+
+When `data-model-image` is provided:
+- The widget automatically fetches the image from the URL
+- If successful, it skips directly to the preview/processing step
+- If the fetch fails (invalid URL, CORS issues, etc.), it falls back to showing the photo upload options
+- This is useful for pre-configured model shots or returning users with saved photos
 
 #### Option B: iframe Embed
 

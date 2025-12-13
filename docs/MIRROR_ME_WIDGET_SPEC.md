@@ -2,7 +2,7 @@
 
 > **Status**: ALL PHASES COMPLETE ✅
 > **Created**: 2025-12-08
-> **Last Updated**: 2025-12-08
+> **Last Updated**: 2025-12-12
 
 ## Implementation Progress
 
@@ -124,6 +124,7 @@ Mirror.Me is an embeddable JavaScript widget that enables e-commerce platforms t
   data-product-currency="USD"
   data-user-image="https://store.com/users/12345/photo.jpg"
   data-user-id="user_12345"
+  data-model-image="https://store.com/models/model.jpg"
   data-theme="light"
   data-locale="en"
   data-button-style="pill"
@@ -168,6 +169,9 @@ Mirror.Me is an embeddable JavaScript widget that enables e-commerce platforms t
         image: 'https://store.com/users/12345/photo.jpg', // Optional: skip photo upload
         id: 'user_12345', // Optional: for analytics
         email: 'user@example.com', // Optional: for sending results
+      },
+      model: {
+        image: 'https://store.com/models/model.jpg', // Optional: pre-loaded model image URL
       },
       options: {
         skipPhotoStep: true, // If user.image provided, go directly to processing
@@ -215,7 +219,19 @@ Mirror.Me is an embeddable JavaScript widget that enables e-commerce platforms t
 | `data-user-email` | string | User email (for sending results) |
 | `data-user-name` | string | User display name |
 
-### 3.4 Customization Attributes
+### 3.4 Model Attributes (Optional - For Pre-loaded Model Image)
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `data-model-image` | URL | Pre-loaded model image URL. When provided, widget automatically fetches and uses this image, skipping the photo upload step. Falls back to upload options if fetch fails. |
+
+> **Note:** The `data-model-image` attribute is useful for:
+> - Pre-configured model shots on product pages
+> - Returning users with saved photos
+> - A/B testing different model images
+> - Providing a seamless one-click try-on experience
+
+### 3.5 Customization Attributes
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -226,7 +242,7 @@ Mirror.Me is an embeddable JavaScript widget that enables e-commerce platforms t
 | `data-modal-size` | enum | `medium` | `small`, `medium`, `large`, `fullscreen` |
 | `data-position` | enum | `center` | Modal position: `center`, `right`, `left` |
 
-### 3.5 Behavior Attributes
+### 3.6 Behavior Attributes
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -420,6 +436,7 @@ mirrorMe.off('result', handlerFn); // Remove listener
 | `POST` | `/api/widget/try-on` | Submit photo and generate try-on |
 | `GET` | `/api/widget/session/:id` | Get session status/result |
 | `POST` | `/api/widget/verify` | Verify merchant key and domain |
+| `GET` | `/api/widget/fetch-image` | Proxy fetch external images (for model image URL feature) |
 
 ### 6.2 Create Session
 
@@ -442,6 +459,9 @@ Origin: https://merchant-store.com
   "user": {
     "id": "user_12345",
     "image": "https://store.com/users/photo.jpg"
+  },
+  "model": {
+    "image": "https://store.com/models/model.jpg"
   },
   "options": {
     "skipPhotoStep": false
