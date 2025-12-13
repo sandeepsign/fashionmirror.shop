@@ -119,6 +119,7 @@ export default function DocsPlatformsShopify() {
   data-product-currency="{{ cart.currency.iso_code }}"
   data-product-specification="{{ product.metafields.custom.specification | escape }}"
   data-product-description="{{ product.description | strip_html | truncate: 200 | escape }}"
+  data-model-image="{{ product.metafields.custom.model_image | escape }}"
   style="
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -137,6 +138,15 @@ export default function DocsPlatformsShopify() {
 
 <script src="https://cdn.fashionmirror.shop/widget.js"></script>
 {% endif %}`}</pre>
+                  </div>
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <span className="text-green-500 text-lg">✨</span>
+                      <div>
+                        <p className="text-green-900 font-medium">New: Model Image Support</p>
+                        <p className="text-green-800 text-sm">The <code className="bg-green-100 px-1 rounded">data-model-image</code> attribute lets you pre-load a model photo. Create a custom metafield <code className="bg-green-100 px-1 rounded">model_image</code> in Shopify to use this feature.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

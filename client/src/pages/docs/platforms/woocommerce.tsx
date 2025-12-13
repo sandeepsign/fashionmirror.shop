@@ -111,6 +111,9 @@ function fashionmirror_add_button() {
     // Get API key from settings
     $api_key = get_option('fashionmirror_api_key', 'YOUR_API_KEY_HERE');
 
+    // Get model image from product meta (optional)
+    $model_image = get_post_meta($product->get_id(), '_fashionmirror_model_image', true);
+
     ?>
     <button
         type="button"
@@ -123,12 +126,24 @@ function fashionmirror_add_button() {
         data-product-currency="<?php echo esc_attr(get_woocommerce_currency()); ?>"
         data-product-specification="<?php echo esc_attr($product->get_attribute('material')); ?>"
         data-product-description="<?php echo esc_attr(wp_trim_words($product->get_short_description(), 30)); ?>"
+        <?php if ($model_image) : ?>
+        data-model-image="<?php echo esc_url($model_image); ?>"
+        <?php endif; ?>
         style="margin-top: 10px; width: 100%;"
     >
         Mirror.me
     </button>
     <?php
 }`}</pre>
+            </div>
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <span className="text-green-500 text-lg">✨</span>
+                <div>
+                  <p className="text-green-900 font-medium">New: Model Image Support</p>
+                  <p className="text-green-800 text-sm">The <code className="bg-green-100 px-1 rounded">data-model-image</code> attribute lets you pre-load a model photo. Add a custom field <code className="bg-green-100 px-1 rounded">_fashionmirror_model_image</code> to your products with the model image URL.</p>
+                </div>
+              </div>
             </div>
           </section>
 

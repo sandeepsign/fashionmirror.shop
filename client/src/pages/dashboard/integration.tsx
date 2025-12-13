@@ -237,7 +237,8 @@ export default function IntegrationPage() {
   data-product-name="Product Name"
   data-product-id="product-123"
   data-product-specification="100% Cotton, Machine Washable"
-  data-product-description="A comfortable everyday tee...">
+  data-product-description="A comfortable everyday tee..."
+  data-model-image="MODEL_IMAGE_URL (optional)">
 </button>`;
 
   const jsSnippet = `// Initialize the widget programmatically
@@ -260,6 +261,9 @@ widget.open({
     id: 'product-123',
     specification: '100% Cotton, Machine Washable',
     description: 'A comfortable everyday tee perfect for any occasion.'
+  },
+  model: {
+    image: 'MODEL_IMAGE_URL' // Optional: Pre-loaded model image (skips upload)
   }
 });`;
 
@@ -556,6 +560,12 @@ widget.open({
                       <code className="text-xs [.dashboard-dark_&]:bg-primary/20 [.dashboard-dark_&]:text-primary [.dashboard-light_&]:bg-emerald-100 [.dashboard-light_&]:text-emerald-700 px-2 py-1 rounded whitespace-nowrap font-semibold">data-product-description</code>
                       <div className="text-sm [.dashboard-dark_&]:text-white/60 [.dashboard-light_&]:text-gray-600">
                         <strong className="[.dashboard-dark_&]:text-white/80 [.dashboard-light_&]:text-gray-700">Optional.</strong> Long-form product description. Displayed on the result screen below the product info.
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <code className="text-xs [.dashboard-dark_&]:bg-primary/20 [.dashboard-dark_&]:text-primary [.dashboard-light_&]:bg-emerald-100 [.dashboard-light_&]:text-emerald-700 px-2 py-1 rounded whitespace-nowrap font-semibold">data-model-image</code>
+                      <div className="text-sm [.dashboard-dark_&]:text-white/60 [.dashboard-light_&]:text-gray-600">
+                        <strong className="[.dashboard-dark_&]:text-white/80 [.dashboard-light_&]:text-gray-700">Optional.</strong> Pre-loaded model image URL. When provided, the widget automatically fetches this image and skips the photo upload step. Falls back to upload if fetch fails.
                       </div>
                     </div>
                   </div>

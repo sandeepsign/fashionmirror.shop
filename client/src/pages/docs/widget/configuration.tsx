@@ -260,7 +260,8 @@ FashionMirror.open({
   productName: 'Summer Dress',
   productId: 'SKU-123',
   productSpecification: '100% Cotton, Machine Washable',
-  productDescription: 'A comfortable everyday dress perfect for any occasion.'
+  productDescription: 'A comfortable everyday dress perfect for any occasion.',
+  modelImage: 'https://yourstore.com/models/model.jpg' // Optional: pre-loaded model image
 });
 
 // Close widget
@@ -298,7 +299,8 @@ FashionMirror.configure({
   data-product-name="Summer Dress"
   data-product-id="SKU-123"
   data-product-specification="100% Cotton, Machine Washable"
-  data-product-description="A beautiful summer dress perfect for any occasion. Features a flattering A-line silhouette with delicate floral print."
+  data-product-description="A beautiful summer dress perfect for any occasion."
+  data-model-image="https://yourstore.com/models/model.jpg"
   data-theme="dark"
   data-primary-color="#ff6b6b"
 >
@@ -341,6 +343,11 @@ FashionMirror.configure({
                     <td className="px-4 py-3 font-mono text-sm text-gray-900">data-product-description</td>
                     <td className="px-4 py-3 text-gray-600">No</td>
                     <td className="px-4 py-3 text-gray-600">Long-form description shown on result screen</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="px-4 py-3 font-mono text-sm text-gray-900">data-model-image</td>
+                    <td className="px-4 py-3 text-gray-600">No</td>
+                    <td className="px-4 py-3 text-gray-600">Pre-loaded model image URL. When provided, the widget automatically fetches and uses this image, skipping the photo upload step. Falls back to upload if fetch fails.</td>
                   </tr>
                 </tbody>
               </table>

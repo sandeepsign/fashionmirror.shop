@@ -107,9 +107,19 @@ export default function DocsQuickstart() {
   data-product-currency="USD"
   data-product-specification="100% Cotton, Machine Washable"
   data-product-description="A beautiful floral dress perfect for summer days."
+  data-model-image="https://yourstore.com/models/model.jpg"
 >
   Mirror.me
 </button>`}</pre>
+            </div>
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <span className="text-green-500 text-lg">✨</span>
+                <div>
+                  <p className="text-green-900 font-medium">New: Model Image URL</p>
+                  <p className="text-green-800 text-sm">Use <code className="bg-green-100 px-1 rounded">data-model-image</code> to pre-load a model photo. When provided, the widget skips the photo upload step and uses this image directly.</p>
+                </div>
+              </div>
             </div>
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-start gap-3">
@@ -184,6 +194,7 @@ export default function DocsQuickstart() {
       data-product-currency="USD"
       data-product-specification="100% Cotton, Machine Washable"
       data-product-description="A beautiful floral dress perfect for summer days."
+      data-model-image="https://yourstore.com/models/model.jpg"
     >
       Mirror.me
     </button>
